@@ -1,0 +1,1021 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<style>html{color-scheme:light}body{margin:0}[hidden]{display:none!important}img{max-width:100%}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}</style>
+<title>Мой дневник</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600&family=Literata:ital,wght@0,400;0,600;1,400&family=Caveat:wght@500;700&display=swap">
+<style>
+/* Layout: sidebar of pages + one paper sheet. Dot-grid paper like a bullet journal; accent hue is user-set. */
+:root{
+  --ah:255;--ac:.11;--al:.47;--on-accent:oklch(.99 0 0);
+  --bg:oklch(.965 .006 255);--surface:oklch(.992 .003 255);--fg:oklch(.25 .02 258);--muted:oklch(.5 .02 258);
+  --line:oklch(.9 .008 255);--dot:oklch(.8 .012 255);--danger:oklch(.54 .17 25);
+  --accent:oklch(var(--al) var(--ac) var(--ah));
+  --accent-soft:color-mix(in oklab,var(--accent) 11%,var(--surface));
+  --ui:"Onest",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --write:"Literata",Georgia,"Times New Roman",serif;--wsize:1rem;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --al:.76;--on-accent:oklch(.2 .02 258);--bg:oklch(.2 .01 258);--surface:oklch(.245 .012 258);--fg:oklch(.93 .008 258);
+  --muted:oklch(.72 .015 258);--line:oklch(.33 .014 258);--dot:oklch(.4 .016 258);--danger:oklch(.72 .15 25);color-scheme:dark}}
+:root[data-theme="dark"]{
+  --al:.76;--on-accent:oklch(.2 .02 258);--bg:oklch(.2 .01 258);--surface:oklch(.245 .012 258);--fg:oklch(.93 .008 258);
+  --muted:oklch(.72 .015 258);--line:oklch(.33 .014 258);--dot:oklch(.4 .016 258);--danger:oklch(.72 .15 25);color-scheme:dark}
+:root[data-font="sans"]{--write:"Onest",system-ui,sans-serif}
+:root[data-font="hand"]{--write:"Caveat","Segoe Script",cursive;--wsize:1.3rem}
+*{box-sizing:border-box}
+html,body{height:auto}
+body{background:var(--bg);color:var(--fg);font:15px/1.5 var(--ui);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--bg)}
+button,input,textarea,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.app{display:grid;grid-template-columns:220px minmax(0,1fr);gap:28px;max-width:1120px;margin:0 auto;padding-block:20px}
+.side{position:sticky;top:calc(env(safe-area-inset-top,0px) + 20px);align-self:start;display:flex;flex-direction:column;gap:18px;min-width:0}
+.brand{font:600 1.15rem/1.25 var(--write);letter-spacing:.005em;overflow-wrap:anywhere}
+.brand small{display:block;font:500 .72rem var(--ui);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+.nav{display:flex;flex-direction:column;gap:2px}
+.nav button{display:flex;align-items:baseline;justify-content:space-between;gap:8px;text-align:left;border:0;background:transparent;border-radius:8px;padding:8px 10px;cursor:pointer;min-width:0}
+.nav button span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nav button small{color:var(--muted);font-size:.72rem;flex:none}
+.nav button:hover{background:var(--accent-soft)}
+.nav button[aria-current=page]{background:var(--accent-soft);box-shadow:inset 3px 0 0 var(--accent);font-weight:600}
+.side-foot{display:flex;flex-direction:column;gap:6px}
+.main{min-width:0;display:flex;flex-direction:column;gap:14px}
+.topbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;position:sticky;top:calc(env(safe-area-inset-top,0px) + 8px);z-index:20;
+  background:var(--bg);padding:6px 0}
+.topbar .grow{flex:1}
+.status{font-size:.8rem;color:var(--muted)}
+.status.err{color:var(--danger)}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:6px 12px;cursor:pointer;line-height:1.3}
+.btn:hover:not(:disabled){border-color:var(--accent);color:var(--accent)}
+.btn:disabled{opacity:.4;cursor:default}
+.btn.pri{background:var(--accent);color:var(--on-accent);border-color:transparent}
+.btn.pri:hover:not(:disabled){color:var(--on-accent);filter:brightness(1.07)}
+.btn.quiet{border-color:transparent;background:transparent;color:var(--muted)}
+.btn.sm{padding:3px 8px;font-size:.82rem}
+.btn.danger:hover{border-color:var(--danger);color:var(--danger)}
+.sheet{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:clamp(16px,4vw,36px);min-height:60vh;min-width:0}
+html[data-paper=dots] .sheet{background-image:radial-gradient(circle,var(--dot) 1px,transparent 1.4px);background-size:24px 24px;background-position:12px 12px}
+html[data-paper=grid] .sheet{background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);background-size:24px 24px}
+html[data-paper=lines] .sheet{background-image:repeating-linear-gradient(transparent 0 31px,var(--line) 31px 32px);background-position:0 12px}
+.tip{display:flex;gap:10px;align-items:flex-start;background:var(--accent-soft);border-radius:8px;padding:10px 12px;font-size:.88rem}
+.tip p{margin:0;flex:1}
+.in{width:100%;border:0;border-bottom:1px solid transparent;background:transparent;padding:4px 2px;border-radius:0;resize:none;min-width:0}
+.in:hover{border-bottom-color:var(--line)}
+.in:focus{outline:none;border-bottom-color:var(--accent)}
+.write{font-family:var(--write);font-size:var(--wsize);line-height:1.6}
+.in::placeholder{color:var(--muted);opacity:.7}
+.ptitle{font:600 clamp(1.5rem,4vw,2rem)/1.2 var(--write);margin:0 0 4px;padding-inline:0}
+.lead{color:var(--muted);margin:0 0 22px;max-width:62ch;text-wrap:pretty}
+.sec{margin-top:26px}
+.sec-h{display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--line);padding-bottom:4px;margin-bottom:8px}
+.sec-h .in{font:600 1.12rem var(--write);width:auto;flex:1}
+.empty{border:1px dashed var(--line);border-radius:10px;padding:18px;color:var(--muted);background:var(--surface)}
+.empty b{color:var(--fg);display:block;margin-bottom:4px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.chip{border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:99px;padding:4px 12px;cursor:pointer}
+.chip:hover{border-color:var(--accent);color:var(--accent)}
+.row{display:flex;gap:10px;align-items:flex-start;padding:6px 0}
+.row .ck{margin-top:5px}
+.row>.grow{flex:1;min-width:0}
+.ck{appearance:none;-webkit-appearance:none;width:20px;height:20px;border:1.5px solid var(--muted);border-radius:6px;display:grid;place-content:center;cursor:pointer;flex:none;margin:0;background:var(--surface)}
+.ck:checked{background:var(--accent);border-color:var(--accent)}
+.ck:checked::after{content:"";width:5px;height:10px;border:solid var(--on-accent);border-width:0 2px 2px 0;transform:rotate(45deg) translate(-1px,-1px)}
+.done .strk{text-decoration:line-through;color:var(--muted)}
+.meta{display:flex;align-items:center;gap:12px;flex-wrap:wrap;font-size:.82rem;color:var(--muted)}
+.seg{display:flex;gap:3px}
+.seg button{width:24px;height:16px;padding:3px 0;border:0;background:var(--line);background-clip:content-box;border-radius:5px;cursor:pointer}
+.seg button.on{background:var(--accent);background-clip:content-box}
+.icon{border:0;background:transparent;color:var(--muted);cursor:pointer;border-radius:6px;padding:2px 7px;line-height:1.4}
+.icon:hover{color:var(--danger);background:var(--accent-soft)}
+.icon.neutral:hover{color:var(--accent)}
+.more{display:grid;gap:6px;margin:4px 0 8px;padding-left:2px}
+.date-in{border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:2px 6px}
+.tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+.notes{display:grid;grid-template-columns:250px minmax(0,1fr);gap:22px}
+.nlist{display:flex;flex-direction:column;gap:4px;min-width:0}
+.nitem{text-align:left;border:1px solid transparent;background:transparent;border-radius:8px;padding:8px 10px;cursor:pointer;display:block;width:100%;min-width:0}
+.nitem:hover{background:var(--accent-soft)}
+.nitem[aria-current=true]{border-color:var(--accent);background:var(--accent-soft)}
+.nitem b{display:block;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nitem span{display:block;font-size:.8rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.neditor{min-width:0;display:flex;flex-direction:column;gap:8px}
+.neditor .ntitle{font:600 1.4rem var(--write)}
+.back{display:none}
+.tscroll{overflow-x:auto;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+.tgrid{border-collapse:separate;border-spacing:0;min-width:100%}
+.tgrid th,.tgrid td{padding:3px;text-align:center;font-weight:400;font-size:.78rem;color:var(--muted)}
+.tgrid th.today{color:var(--accent);font-weight:600}
+.tgrid .hn{position:sticky;left:0;background:var(--surface);text-align:left;min-width:150px;max-width:210px;padding:3px 8px;z-index:2;border-right:1px solid var(--line)}
+.tgrid .hn .in{font-size:.92rem;color:var(--fg)}
+.tgrid .st{min-width:64px;padding:0 10px;color:var(--fg);white-space:nowrap}
+.cell{width:26px;height:26px;border-radius:7px;border:1px solid var(--line);background:transparent;cursor:pointer;padding:0}
+.cell:hover{border-color:var(--accent)}
+.cell.on{background:var(--accent);border-color:var(--accent)}
+.cell.fut{opacity:.55}
+.daynav{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px}
+.daynav h2{font:600 1.25rem var(--write);margin:0;flex:1;min-width:12ch;text-transform:capitalize}
+.field{margin-top:20px}
+.field>label,.field>.lab{display:block;font-size:.76rem;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+.field textarea.in{border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--surface);min-height:72px}
+.scale{display:flex;gap:6px;flex-wrap:wrap}
+.scale button{width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:var(--surface);cursor:pointer}
+.scale button:hover{border-color:var(--accent)}
+.scale button.on{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+.fedit{display:flex;gap:6px;align-items:center;border:1px solid var(--line);border-radius:8px;padding:4px 8px;background:var(--surface);margin-bottom:6px}
+.fedit .in{flex:1}
+.recent{margin-top:30px}
+.recent h3{font-size:.76rem;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin:0 0 6px;font-weight:500}
+.rec{display:flex;gap:10px;align-items:baseline;width:100%;text-align:left;border:0;background:transparent;border-radius:8px;padding:6px 8px;cursor:pointer;min-width:0}
+.rec:hover,.rec[aria-current=true]{background:var(--accent-soft)}
+.rec time{flex:none;font-size:.82rem;color:var(--muted);min-width:7.5ch}
+.rec span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--accent);margin-right:6px}
+.ov{position:fixed;inset:0;z-index:50;background:color-mix(in oklab,var(--fg) 35%,transparent);display:flex;justify-content:flex-end}
+.panel{width:min(460px,100%);height:100%;overflow-y:auto;background:var(--bg);padding:calc(18px + env(safe-area-inset-top,0px)) calc(18px + env(safe-area-inset-right,0px)) calc(24px + env(safe-area-inset-bottom,0px)) 18px;display:flex;flex-direction:column;gap:20px}
+.panel h2{font:600 1.3rem var(--write);margin:0}
+.panel h3{font-size:.76rem;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin:0 0 8px;font-weight:500}
+.opts{display:flex;gap:6px;flex-wrap:wrap}
+.opts .btn[aria-pressed=true]{border-color:var(--accent);background:var(--accent-soft);color:var(--accent);font-weight:600}
+.sw{width:34px;height:34px;border-radius:50%;border:2px solid var(--surface);box-shadow:0 0 0 1px var(--line);cursor:pointer;padding:0}
+.sw[aria-pressed=true]{box-shadow:0 0 0 2px var(--fg)}
+.plist{display:flex;flex-direction:column;gap:4px}
+.pitem{display:flex;gap:4px;align-items:center;border:1px solid var(--line);border-radius:8px;padding:4px 8px;background:var(--surface)}
+.pitem .in{flex:1}
+.types{display:grid;gap:8px}
+.types button{text-align:left;border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:10px 12px;cursor:pointer}
+.types button:hover{border-color:var(--accent)}
+.types b{display:block}.types span{color:var(--muted);font-size:.85rem}
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:60;display:flex;gap:12px;align-items:center;
+  background:var(--fg);color:var(--bg);border-radius:10px;padding:8px 8px 8px 14px;max-width:calc(100% - 32px)}
+#toast button{border:0;background:transparent;color:inherit;font-weight:600;text-decoration:underline;cursor:pointer}
+#toast[hidden]{display:none}
+.load{display:grid;place-items:center;min-height:60vh;color:var(--muted);text-align:center;gap:6px}
+@media (max-width:780px){
+  .app{grid-template-columns:minmax(0,1fr);gap:12px;padding-block:12px}
+  .side{position:static}
+  .nav{flex-direction:row;overflow-x:auto;gap:6px;padding-bottom:4px}
+  .nav button{flex:none;border:1px solid var(--line);background:var(--surface)}
+  .nav button small{display:none}
+  .side-foot{flex-direction:row;flex-wrap:wrap}
+  .notes{grid-template-columns:minmax(0,1fr)}
+  .notes[data-open=true] .nlist{display:none}
+  .notes[data-open=false] .neditor{display:none}
+  .back{display:inline-block}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+.mdot{display:inline-block;width:16px;height:16px;border-radius:50%;flex:none;box-shadow:inset 0 0 0 1px color-mix(in oklab,var(--fg) 22%,transparent)}
+.mdot.empty{background:transparent;border:1.5px dashed var(--muted);box-shadow:none}
+.mpick{border:0;background:transparent;cursor:pointer;padding:4px;margin-top:2px;border-radius:8px;display:grid;place-items:center}
+.mpick:hover{background:var(--accent-soft)}
+.mname{flex:none;font-size:.8rem;color:var(--muted);margin-top:6px;max-width:14ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.moment{border-bottom:1px solid var(--line);padding:4px 0 8px}
+.mpal{margin:2px 0 6px 34px}
+.mtext{margin-left:34px;display:flex;gap:8px;align-items:center;min-width:0}
+.moment>.in{margin-left:34px;width:calc(100% - 34px)}
+.mprev{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.chip[aria-pressed=true]{border-color:var(--accent);background:var(--accent-soft);color:var(--accent);font-weight:600}
+.chip .mdot{width:12px;height:12px;vertical-align:-1px;margin-right:2px}
+.hues{display:flex;gap:4px;flex-wrap:wrap}
+.hue{width:20px;height:20px;border-radius:50%;border:2px solid var(--surface);box-shadow:0 0 0 1px var(--line);cursor:pointer;padding:0}
+.hue[aria-pressed=true]{box-shadow:0 0 0 2px var(--fg)}
+.tsec{border-top:1px solid var(--line);margin-top:10px;padding-top:4px}
+.tsec-h{display:flex;justify-content:space-between;align-items:baseline;gap:10px;width:100%;border:0;background:transparent;cursor:pointer;padding:8px 0;text-align:left;font:600 1rem var(--write)}
+.tsec-h small{font:400 .8rem var(--ui);color:var(--muted)}
+.tsec-b{padding:2px 0 10px;display:grid;gap:6px;min-width:0}
+.due{font-size:.8rem;color:var(--danger);font-weight:600;flex:none}
+.bar{height:8px;border-radius:99px;background:var(--line);overflow:hidden;margin-top:8px}
+.bar i{display:block;height:100%;background:var(--accent)}
+.thumb{height:44px;width:44px;object-fit:cover;border-radius:6px;flex:none}
+a{color:var(--accent)}
+.fedit .grow{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.setup{max-width:460px;margin:8vh auto;display:grid;gap:14px}
+.setup .in{border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--surface)}
+</style>
+
+</head>
+<body>
+<div id="app"><div class="load"><div><b>Открываю дневник…</b><div id="slow" hidden>Связь медленная. Дневник откроется, как только ответит хранилище.</div></div></div></div>
+<div id="toast" hidden role="status"></div>
+<script>
+(function(){
+'use strict';
+/* ---------- helpers ---------- */
+const $=s=>document.querySelector(s);
+const clone=o=>o==null?o:JSON.parse(JSON.stringify(o));
+const uidn=()=>Math.random().toString(36).slice(2,8)+Date.now().toString(36).slice(-3);
+function h(t,a,...k){const e=document.createElement(t);for(const[n,v]of Object.entries(a||{})){if(v==null||v===false)continue;
+  if(n==='class')e.className=v;else if(n.startsWith('on'))e.addEventListener(n.slice(2),v);else if(n==='value')e.value=v;
+  else if(n==='checked')e.checked=!!v;else e.setAttribute(n,v===true?(n.startsWith('aria-')?'true':''):v)}
+  for(const c of k.flat(9)){if(c==null||c===false)continue;e.append(c.nodeType?c:document.createTextNode(c))}return e}
+const pad=n=>String(n).padStart(2,'0');
+const ymd=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+const today=()=>ymd(new Date());
+const parseD=s=>{const[a,b,c]=s.split('-').map(Number);return new Date(a,b-1,c)};
+const addDays=(s,n)=>{const d=parseD(s);d.setDate(d.getDate()+n);return ymd(d)};
+const fmtLong=s=>parseD(s).toLocaleDateString('ru-RU',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+const fmtShort=s=>parseD(s).toLocaleDateString('ru-RU',{day:'numeric',month:'short'});
+const monthName=m=>{const[y,mo]=m.split('-').map(Number);return new Date(y,mo-1,1).toLocaleDateString('ru-RU',{month:'long',year:'numeric'})};
+const daysIn=m=>{const[y,mo]=m.split('-').map(Number);return new Date(y,mo,0).getDate()};
+const shiftMonth=(m,n)=>{const[y,mo]=m.split('-').map(Number);const d=new Date(y,mo-1+n,1);return d.getFullYear()+'-'+pad(d.getMonth()+1)};
+function auto(el){el.style.height='auto';el.style.height=(el.scrollHeight+2)+'px'}
+function ta(value,ph,id,onInput,cls){const e=h('textarea',{class:'in '+(cls||'write'),rows:1,placeholder:ph,id:id,value:value||''});
+  e.addEventListener('input',()=>{auto(e);onInput(e.value)});requestAnimationFrame(()=>auto(e));return e}
+function inp(value,ph,id,onInput,cls,type){const e=h('input',{class:'in '+(cls||''),type:type||'text',placeholder:ph,id:id,value:value||''});
+  e.addEventListener('input',()=>onInput(e.value));return e}
+
+/* ---------- state ---------- */
+let PREF={};try{PREF=JSON.parse(localStorage.getItem('dnevnik-pref')||'{}')}catch(e){}
+const S={settings:null,pages:[],entries:{},loaded:{},cur:null,db:null,uid:null,local:false,ready:false,dirty:false,
+  hist:{undo:[],redo:[]},ui:{settings:false,newPage:false},focus:null,entSub:null,
+  view:{sec:{},stab:{},topic:{},pick:null,moodEdit:false,sfilter:'',newHue:90,phEdit:false,week:null,month:today().slice(0,7),date:today(),hideDone:false,open:{},note:{},noteOpen:false,fieldsEdit:false,q:''}};
+const TYPES={goals:{name:'Цели',def:'Цели на жизнь',desc:'Сферы жизни и цели в каждой, с отметкой прогресса.'},
+  plans:{name:'Планы',def:'Планы',desc:'Списки дел по срокам: неделя, месяц, год, «когда-нибудь».'},
+  notes:{name:'Заметки',def:'Заметки',desc:'Свободные записи с названием и поиском.'},
+  tracker:{name:'Трекер',def:'Привычки',desc:'Таблица привычек по дням месяца.'},
+  study:{name:'Обучение',def:'План обучения',desc:'Цель курса, база тем с карточками и недельный трекер.'},
+  day:{name:'День',def:'Мой день',desc:'Запись на каждую дату с полями, которые настраиваешь сама.'}};
+const ACC={blue:[255,.11,'Синий'],sage:[160,.075,'Шалфей'],plum:[330,.12,'Слива'],clay:[40,.115,'Глина'],graphite:[255,.02,'Графит']};
+const base=()=>'diary/v2';
+const R={settings:()=>S.db.doc(base()),
+  page:id=>S.db.doc(base()).collection('pages').doc(id),
+  entry:(pid,eid)=>S.db.doc(base()).collection('pages').doc(pid).collection('entries').doc(eid)};
+const page=()=>S.pages.find(p=>p.id===S.cur)||null;
+function visible(){const o=(S.settings&&S.settings.order)||[];const by=new Map(S.pages.map(p=>[p.id,p]));
+  const a=o.map(i=>by.get(i)).filter(Boolean);for(const p of S.pages)if(!o.includes(p.id))a.push(p);return a.filter(p=>!p.archived)}
+function newPageData(type,title){const p={id:'p'+uidn(),type,title:title||TYPES[type].def,created:Date.now(),archived:false};
+  if(type==='goals')p.areas=[];if(type==='plans')p.groups=[];if(type==='tracker'){p.habits=[];p.marks={}}
+  if(type==='study'){p.goal={result:'',deadline:'',hours:5,res:[]};p.weeks={}}
+  if(type==='day')p.fields=[{id:'f1',label:'Настроение',kind:'scale'},{id:'f2',label:'Главное на сегодня',kind:'tasks'},
+    {id:'f3',label:'Благодарность',kind:'long'},{id:'f4',label:'Как прошёл день',kind:'moments'}];if(type==='day')p.moods=clone(DEF_MOODS);
+  return p}
+
+/* ---------- local fallback store (same shape as db) ---------- */
+function makeLocal(){let st={};try{st=JSON.parse(localStorage.getItem('dnevnik-data')||'{}')}catch(e){}
+  const ls=new Set();const save=()=>{try{localStorage.setItem('dnevnik-data',JSON.stringify(st))}catch(e){}};
+  const par=p=>p.slice(0,p.lastIndexOf('/'));
+  const snap=p=>({id:p.split('/').pop(),exists:p in st,data:()=>p in st?JSON.parse(JSON.stringify(st[p])):undefined,metadata:{fromCache:false,hasPendingWrites:false}});
+  const qs=c=>{const docs=Object.keys(st).filter(k=>par(k)===c).map(snap);return{docs,size:docs.length,empty:!docs.length,metadata:{fromCache:false,hasPendingWrites:false}}};
+  const fire=p=>ls.forEach(l=>{if(l.p===p||l.p===par(p))l.f()});
+  const doc=p=>({path:p,id:p.split('/').pop(),get:async()=>snap(p),
+    set:async d=>{st[p]=JSON.parse(JSON.stringify(d));save();fire(p)},
+    delete:async()=>{delete st[p];save();fire(p)},
+    onSnapshot:n=>{const l={p,f:()=>n(snap(p))};ls.add(l);setTimeout(l.f,0);return()=>ls.delete(l)},
+    collection:n=>col(p+'/'+n)});
+  const col=p=>({path:p,doc:id=>doc(p+'/'+id),get:async()=>qs(p),
+    onSnapshot:n=>{const l={p,f:()=>n(qs(p))};ls.add(l);setTimeout(l.f,0);return()=>ls.delete(l)}});
+  return{doc,collection:col}}
+
+/* ---------- local <-> path mapping ---------- */
+function getLocal(p){const s=p.split('/');if(s.length===2)return S.settings;
+  if(s.length===4)return S.pages.find(x=>x.id===s[3])||null;
+  if(s.length===6)return(S.entries[s[3]]||{})[s[5]]||null;return null}
+function setLocal(p,d){const s=p.split('/');
+  if(s.length===2){S.settings=d}
+  else if(s.length===4){const i=S.pages.findIndex(x=>x.id===s[3]);
+    if(d==null){if(i>=0)S.pages.splice(i,1)}else if(i>=0)S.pages[i]=d;else S.pages.push(d)}
+  else if(s.length===6){const m=S.entries[s[3]]||(S.entries[s[3]]={});if(d==null)delete m[s[5]];else m[s[5]]=d}}
+
+/* ---------- debounced writer: one write at a time per document ---------- */
+const W={q:new Map(),act:{},chain:{},err:false};
+const busy=p=>W.q.has(p)||!!W.act[p];
+function queue(ref,data,delay){const p=ref.path;const e=W.q.get(p)||{};clearTimeout(e.t);e.ref=ref;e.data=data==null?null:clone(data);
+  e.t=setTimeout(()=>flush(p),delay);W.q.set(p,e);setStatus()}
+async function flush(p){const e=W.q.get(p);if(!e)return;clearTimeout(e.t);W.q.delete(p);W.act[p]=(W.act[p]||0)+1;
+  const prev=W.chain[p]||Promise.resolve();
+  const run=prev.then(()=>e.data==null?e.ref.delete():e.ref.set(e.data)).then(()=>{W.err=false},er=>{W.err=true;W.code=(er&&(er.code||er.message))||'';console.error(er)});
+  W.chain[p]=run;await run;W.act[p]--;if(!W.act[p])delete W.act[p];setStatus()}
+function flushAll(){for(const p of[...W.q.keys()])flush(p)}
+addEventListener('pagehide',flushAll);
+document.addEventListener('visibilitychange',()=>{if(document.hidden)flushAll()});
+function setStatusOld(){const el=$('#status');if(!el)return;const pend=W.q.size||Object.keys(W.act).length;
+  el.className='status'+(W.err&&!pend?' err':'');
+  el.textContent=pend?'Сохраняю…':W.err?'Не удалось сохранить'+(W.code?' ('+W.code+')':'')+'. Попробую снова при следующей правке':S.local?'Сохранено в этом браузере':'Всё сохранено'}
+
+/* ---------- edits and history (undo/redo) ---------- */
+const E={};
+function commitEdits(){const ks=Object.keys(E);if(!ks.length)return;const ch=[];
+  for(const p of ks){const s=E[p];const after=clone(getLocal(p));if(JSON.stringify(after)!==JSON.stringify(s.before))ch.push({ref:s.ref,before:s.before,after});delete E[p]}
+  if(ch.length)pushHist(ch)}
+function pushHist(changes){S.hist.undo.push({changes});if(S.hist.undo.length>150)S.hist.undo.shift();S.hist.redo.length=0;syncTop()}
+function mutate(ref,fn,o){o=o||{};const p=ref.path;if(!o.typing)commitEdits();
+  let cur=getLocal(p);const existed=cur!=null;if(!cur){if(!o.init)return null;cur=clone(o.init)}
+  const before=existed?clone(cur):null;fn(cur);setLocal(p,cur);queue(ref,cur,o.typing?650:60);
+  if(o.typing){if(!E[p])E[p]={ref,before}}else pushHist([{ref,before,after:clone(cur)}]);return cur}
+function create(ref,data){commitEdits();setLocal(ref.path,clone(data));queue(ref,data,60);pushHist([{ref,before:null,after:clone(data)}])}
+function destroy(ref){commitEdits();const before=clone(getLocal(ref.path));setLocal(ref.path,null);queue(ref,null,60);pushHist([{ref,before,after:null}])}
+function applyState(ref,st){setLocal(ref.path,clone(st));queue(ref,st,60)}
+function afterHist(){if(!page()||page().archived)S.cur=(visible()[0]||{}).id||null;applyTheme();selectEntries();syncTop();render()}
+function undo(){commitEdits();const a=S.hist.undo.pop();if(!a)return;for(const c of a.changes.slice().reverse())applyState(c.ref,c.before);S.hist.redo.push(a);afterHist()}
+function redo(){commitEdits();const a=S.hist.redo.pop();if(!a)return;for(const c of a.changes)applyState(c.ref,c.after);S.hist.undo.push(a);afterHist()}
+function syncTop(){const u=$('#b-undo'),r=$('#b-redo');if(u)u.disabled=!S.hist.undo.length;if(r)r.disabled=!S.hist.redo.length}
+document.addEventListener('keydown',e=>{if(!(e.ctrlKey||e.metaKey)||e.altKey)return;const k=e.key.toLowerCase();if(k!=='z'&&k!=='y')return;
+  const a=document.activeElement;if(a&&/^(INPUT|TEXTAREA)$/.test(a.tagName))return;e.preventDefault();(k==='y'||e.shiftKey)?redo():undo()});
+document.addEventListener('focusout',()=>{commitEdits();setTimeout(()=>{if(S.dirty&&!editing()){render()}},140)});
+let tt;function toast(msg,undoable){const t=$('#toast');
+  t.replaceChildren(h('span',{},msg),undoable?h('button',{onclick:()=>{undo();t.hidden=true}},'Вернуть'):null);
+  t.hidden=false;clearTimeout(tt);tt=setTimeout(()=>{t.hidden=true},6500)}
+function editing(){const a=document.activeElement;return!!(a&&a.closest&&a.closest('.main')&&/^(INPUT|TEXTAREA)$/.test(a.tagName))}
+function changed(){if(!S.ready)return;if(editing()){S.dirty=true;return}render()}
+
+/* ---------- theme ---------- */
+function applyTheme(){const s=S.settings||PREF;const r=document.documentElement;
+  if(s.theme==='light'||s.theme==='dark')r.dataset.theme=s.theme;else delete r.dataset.theme;
+  r.dataset.paper=s.paper||'dots';r.dataset.font=s.font||'serif';
+  const a=ACC[s.accent]||ACC.blue;r.style.setProperty('--ah',a[0]);r.style.setProperty('--ac',a[1]);
+  try{localStorage.setItem('dnevnik-pref',JSON.stringify({theme:s.theme,paper:s.paper,font:s.font,accent:s.accent}))}catch(e){}}
+
+/* ---------- sync with storage ---------- */
+let gotS=false,gotP=false,existsS=false,seenS=false,seenP=false,unsubs=[];const CONF=new Set();
+function onErr(e){console.error(e);W.err=true;setStatus()}
+function onSettings(snap){seenS=true;const p=R.settings().path;
+  if(snap.exists){gotS=true;existsS=true;if(!busy(p)){const d=clone(snap.data());if(JSON.stringify(d)!==JSON.stringify(S.settings)){S.settings=d;applyTheme();changed()}}}
+  else if(snap.metadata.fromCache!==true){gotS=true;existsS=false}
+  maybeBoot()}
+function onPages(qs){seenP=true;const b=R.settings().path+'/pages/';const seen=new Set();
+  for(const d of qs.docs){seen.add(d.id);if(busy(b+d.id))continue;const data=clone(d.data());data.id=d.id;
+    const i=S.pages.findIndex(x=>x.id===d.id);if(i<0)S.pages.push(data);else if(JSON.stringify(S.pages[i])!==JSON.stringify(data))S.pages[i]=data}
+  if(qs.metadata.fromCache!==true){seen.forEach(i=>CONF.add(i));S.pages=S.pages.filter(x=>seen.has(x.id)||busy(b+x.id)||!CONF.has(x.id));gotP=true}
+  maybeBoot();changed()}
+function maybeBoot(force){if(S.ready||(!force&&(!gotS||!gotP)))return;
+  if(!existsS){const ps=S.pages.length?[]:['goals','plans','tracker','day','notes'].map(t=>newPageData(t));
+    ps.forEach(p=>{S.pages.push(p);queue(R.page(p.id),p,0)});
+    const vis=S.pages.filter(p=>!p.archived);
+    S.settings={v:1,title:'Мой дневник',theme:PREF.theme||'auto',paper:PREF.paper||'dots',font:PREF.font||'serif',accent:PREF.accent||'blue',
+      order:S.pages.map(p=>p.id),last:(vis[0]||{}).id||null,tip:false};
+    queue(R.settings(),S.settings,0)}
+  S.ready=true;migrate();applyTheme();const v=visible();const last=S.settings.last;S.cur=(v.find(p=>p.id===last)||v[0]||{}).id||null;
+  selectEntries();render()}
+function selectEntries(){const p=page();const need=p&&(p.type==='notes'||p.type==='day'||p.type==='study')?p.id:null;
+  if(S.entSub&&S.entSub.pid===need)return;
+  if(S.entSub){S.entSub.un();S.entSub=null}
+  if(!need)return;const pid=need;
+  S.entSub={pid,un:R.page(pid).collection('entries').onSnapshot(qs=>{
+    const m=S.entries[pid]||(S.entries[pid]={});const seen=new Set();
+    for(const d of qs.docs){seen.add(d.id);if(busy(R.entry(pid,d.id).path))continue;m[d.id]=clone(d.data())}
+    if(qs.metadata.fromCache!==true){for(const k of Object.keys(m))if(!seen.has(k)&&!busy(R.entry(pid,k).path))delete m[k];S.loaded[pid]=true}
+    changed()},onErr)}}
+function go(id){commitEdits();S.cur=id;S.view.q='';S.view.noteOpen=false;S.view.fieldsEdit=false;S.ui.newPage=false;
+  if(S.settings){S.settings.last=id;queue(R.settings(),S.settings,1500)}
+  selectEntries();render();window.scrollTo(0,0)}
+
+/* ---------- shell ---------- */
+function render(){S.dirty=false;const app=$('#app');const p=page();const op=document.querySelector('.panel');const top=op?op.scrollTop:0;
+  app.replaceChildren(h('div',{class:'app'},sidebar(),
+    h('div',{class:'main'},topbar(),tipBar(),h('div',{class:'sheet'},p?viewFor(p):noPage()))),
+    S.ui.settings?settingsPanel():null,S.ui.newPage?newPagePanel():null);
+  setStatus();syncTop();const np=document.querySelector('.panel');if(np)np.scrollTop=top;
+  if(S.focus){const el=document.getElementById(S.focus);S.focus=null;if(el)el.focus()}}
+function sidebar(){return h('aside',{class:'side'},
+  h('div',{class:'brand'},h('small',{},parseD(today()).toLocaleDateString('ru-RU',{weekday:'long',day:'numeric',month:'long'})),S.settings.title||'Мой дневник'),
+  h('nav',{class:'nav','aria-label':'Страницы'},visible().map(p=>h('button',{'data-id':p.id,'aria-current':p.id===S.cur?'page':null,onclick:()=>go(p.id)},
+    h('span',{},p.title||'Без названия'),h('small',{},TYPES[p.type]?TYPES[p.type].name:'')))),
+  h('div',{class:'side-foot'},
+    h('button',{class:'btn quiet',onclick:()=>{S.ui.newPage=true;render()}},'+ Новая страница'),
+    h('button',{class:'btn quiet',onclick:()=>{S.ui.settings=true;render()}},'Оформление и копия')))}
+function topbar(){return h('div',{class:'topbar'},
+  h('button',{class:'btn',id:'b-undo',onclick:undo,title:'Отменить (Ctrl+Z)'},'↶ Отменить'),
+  h('button',{class:'btn',id:'b-redo',onclick:redo,title:'Вернуть (Ctrl+Shift+Z)'},'Вернуть ↷'),
+  h('span',{class:'grow'}),h('span',{id:'status',class:'status'}))}
+function tipBar(){const out=[];
+  if(S.local)out.push(h('div',{class:'tip'},h('p',{},'Общее хранилище сейчас недоступно, поэтому записи лежат только в этом браузере. Сделай резервную копию в разделе «Оформление и копия».')));
+  if(!S.settings.tip)out.push(h('div',{class:'tip'},h('p',{},'Переписывать ничего не нужно. Всё сохраняется само, любую правку можно отменить кнопкой выше или Ctrl+Z, а удалённое возвращается кнопкой «Вернуть».'),
+    h('button',{class:'btn sm',onclick:()=>{S.settings.tip=true;queue(R.settings(),S.settings,60);render()}},'Понятно')));
+  return out}
+function noPage(){return h('div',{class:'empty'},h('b',{},'Страниц пока нет'),'Создай первую: цели, планы, трекер, заметки или записи по дням.',
+  h('div',{class:'chips'},h('button',{class:'btn pri',onclick:()=>{S.ui.newPage=true;render()}},'+ Новая страница')))}
+function viewFor(p){switch(p.type){case'goals':return goalsView(p);case'plans':return plansView(p);case'notes':return notesView(p);
+  case'tracker':return trackerView(p);case'day':return dayView(p);case'study':return studyView(p)}return h('div',{},'Неизвестный тип страницы')}
+function head(p,lead){return[inp(p.title,'Название страницы','ptitle',v=>{
+    mutate(R.page(p.id),d=>{d.title=v},{typing:true});const b=document.querySelector('.nav button[data-id="'+p.id+'"] span');if(b)b.textContent=v||'Без названия'},'ptitle write'),
+  h('p',{class:'lead'},lead)]}
+function emptyBox(title,text,chips,fn){return h('div',{class:'empty'},h('b',{},title),text,
+  chips&&chips.length?h('div',{class:'chips'},chips.map(c=>h('button',{class:'chip',onclick:()=>fn(c)},c))):null)}
+const act=(p,fn)=>mutate(R.page(p.id),fn);
+const edit=(p,fn)=>mutate(R.page(p.id),fn,{typing:true});
+function seg(v,fn){return h('div',{class:'seg',role:'group','aria-label':'Прогресс'},[1,2,3,4,5].map(i=>
+  h('button',{class:v>=i*20?'on':'','aria-label':i*20+'%',title:i*20+'%',onclick:()=>fn(v===i*20?(i-1)*20:i*20)})))}
+
+/* ---------- goals ---------- */
+const fa=(d,id)=>d.areas.find(x=>x.id===id);
+const fg=(d,aid,gid)=>fa(d,aid).goals.find(x=>x.id===gid);
+function addArea(p,name){const id='a'+uidn();act(p,d=>{d.areas.push({id,name,goals:[]})});S.focus=name?null:'an-'+id;render()}
+function addGoal(p,a){const id='g'+uidn();act(p,d=>{fa(d,a.id).goals.push({id,text:'',note:'',due:'',progress:0,done:false})});S.focus='gt-'+id;render()}
+function goalsView(p){const out=head(p,'Сферы жизни и то, к чему ты идёшь в каждой. Любую строку можно поправить прямо на месте.');
+  if(!p.areas.length)out.push(emptyBox('Начни со сфер жизни','Выбери из подсказок или добавь свою. Названия и состав можно менять в любой момент.',
+    ['Здоровье','Работа и деньги','Отношения','Развитие','Творчество','Путешествия','Дом и быт'],n=>addArea(p,n)));
+  p.areas.forEach(a=>out.push(h('section',{class:'sec'},
+    h('div',{class:'sec-h'},inp(a.name,'Название сферы','an-'+a.id,v=>edit(p,d=>{fa(d,a.id).name=v}),'write'),
+      h('button',{class:'icon',title:'Удалить сферу',onclick:()=>{act(p,d=>{d.areas=d.areas.filter(x=>x.id!==a.id)});toast('Сфера удалена',true);render()}},'Удалить')),
+    a.goals.map(g=>goalEl(p,a,g)),
+    h('button',{class:'btn quiet sm',onclick:()=>addGoal(p,a)},'+ Цель'))));
+  if(p.areas.length)out.push(h('div',{class:'tools',style:'margin-top:26px'},h('button',{class:'btn',onclick:()=>addArea(p,'')},'+ Новая сфера')));
+  return out}
+function goalEl(p,a,g){const open=S.view.open[g.id]||g.note||g.due;
+  return h('div',{class:'goal'+(g.done?' done':'')},h('div',{class:'row'},
+    h('input',{type:'checkbox',class:'ck',checked:g.done,'aria-label':'Достигнута',onchange:e=>{const v=e.target.checked;act(p,d=>{fg(d,a.id,g.id).done=v});render()}}),
+    h('div',{class:'grow'},
+      ta(g.text,'Что я хочу…','gt-'+g.id,v=>edit(p,d=>{fg(d,a.id,g.id).text=v}),'write strk'),
+      h('div',{class:'meta'},seg(g.progress||0,n=>{act(p,d=>{fg(d,a.id,g.id).progress=n});render()}),
+        h('span',{},(g.progress||0)+'%'),g.due?h('span',{},'до '+fmtShort(g.due)):null,
+        h('button',{class:'btn quiet sm',onclick:()=>{S.view.open[g.id]=!open;render()}},open?'Скрыть детали':'Заметка и срок')),
+      open?h('div',{class:'more'},ta(g.note,'Как к этому прийти, что мешает, что понадобится','gn-'+g.id,v=>edit(p,d=>{fg(d,a.id,g.id).note=v}),'write'),
+        h('label',{},'Срок ',h('input',{type:'date',class:'date-in',value:g.due||'',onchange:e=>{const v=e.target.value;act(p,d=>{fg(d,a.id,g.id).due=v});render()}}))):null),
+    h('button',{class:'icon',title:'Удалить цель',onclick:()=>{act(p,d=>{const A=fa(d,a.id);A.goals=A.goals.filter(x=>x.id!==g.id)});toast('Цель удалена',true);render()}},'✕')))}
+
+/* ---------- plans ---------- */
+const fpg=(d,id)=>d.groups.find(x=>x.id===id);
+const fpi=(d,gid,id)=>fpg(d,gid).items.find(x=>x.id===id);
+function addGroup(p,name){const id='s'+uidn();act(p,d=>{d.groups.push({id,name,items:[]})});S.focus=name?null:'sn-'+id;render()}
+function addItem(p,gr,afterId){const id='i'+uidn();act(p,d=>{const g=fpg(d,gr.id);const i=afterId?g.items.findIndex(x=>x.id===afterId)+1:g.items.length;
+  g.items.splice(i,0,{id,text:'',done:false,date:''})});S.focus='it-'+id;render()}
+function plansView(p){const out=head(p,'Списки дел по срокам. Enter в конце строки создаёт следующий пункт.');
+  if(!p.groups.length)out.push(emptyBox('Разбей планы по срокам','Выбери готовые группы или назови свою.',['На этой неделе','В этом месяце','В этом году','Когда-нибудь'],n=>addGroup(p,n)));
+  else out.push(h('div',{class:'tools'},h('button',{class:'btn sm','aria-pressed':S.view.hideDone,onclick:()=>{S.view.hideDone=!S.view.hideDone;render()}},S.view.hideDone?'Показать выполненное':'Скрыть выполненное')));
+  p.groups.forEach(gr=>{const items=gr.items.filter(i=>!(S.view.hideDone&&i.done));const dn=gr.items.filter(i=>i.done).length;
+    out.push(h('section',{class:'sec'},
+      h('div',{class:'sec-h'},inp(gr.name,'Название группы','sn-'+gr.id,v=>edit(p,d=>{fpg(d,gr.id).name=v}),'write'),
+        h('span',{class:'status'},dn+' из '+gr.items.length),
+        h('button',{class:'icon',title:'Удалить группу',onclick:()=>{act(p,d=>{d.groups=d.groups.filter(x=>x.id!==gr.id)});toast('Группа удалена',true);render()}},'Удалить')),
+      items.map(i=>planItem(p,gr,i)),
+      h('button',{class:'btn quiet sm',onclick:()=>addItem(p,gr,null)},'+ Пункт')))});
+  if(p.groups.length)out.push(h('div',{class:'tools',style:'margin-top:26px'},h('button',{class:'btn',onclick:()=>addGroup(p,'')},'+ Новая группа')));
+  return out}
+function planItem(p,gr,i){const open=S.view.open[i.id]||i.date;const ti=ta(i.text,'Что нужно сделать','it-'+i.id,v=>edit(p,d=>{fpi(d,gr.id,i.id).text=v}),'write strk');
+  ti.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();addItem(p,gr,i.id)}});
+  return h('div',{class:'row'+(i.done?' done':'')},
+    h('input',{type:'checkbox',class:'ck',checked:i.done,'aria-label':'Выполнено',onchange:e=>{const v=e.target.checked;act(p,d=>{fpi(d,gr.id,i.id).done=v});render()}}),
+    h('div',{class:'grow'},ti),
+    open?h('input',{type:'date',class:'date-in','aria-label':'Срок',value:i.date||'',onchange:e=>{const v=e.target.value;act(p,d=>{fpi(d,gr.id,i.id).date=v});render()}}):
+      h('button',{class:'icon neutral',title:'Добавить срок',onclick:()=>{S.view.open[i.id]=true;render()}},'срок'),
+    h('button',{class:'icon',title:'Удалить пункт',onclick:()=>{act(p,d=>{const g=fpg(d,gr.id);g.items=g.items.filter(x=>x.id!==i.id)});toast('Пункт удалён',true);render()}},'✕'))}
+
+/* ---------- notes ---------- */
+function addNote(p){const id='n'+uidn();create(R.entry(p.id,id),{id,title:'',body:'',created:Date.now(),updated:Date.now()});
+  S.view.note[p.id]=id;S.view.noteOpen=true;S.focus='nb-'+id;render()}
+const words=s=>(s.trim().match(/\S+/g)||[]).length;
+function notesView(p){const m=S.entries[p.id]||{};const all=Object.values(m).filter(Boolean).sort((a,b)=>(b.updated||0)-(a.updated||0));
+  let sel=S.view.note[p.id];if(!m[sel])sel=null;if(!sel&&all[0]&&matchMedia('(min-width:781px)').matches)sel=all[0].id;
+  const box=h('div',{class:'nlist-items nlist'});
+  const fill=()=>{const q=S.view.q.trim().toLowerCase();const l=all.filter(n=>!q||((n.title||'')+' '+(n.body||'')).toLowerCase().includes(q));
+    box.replaceChildren(...(l.length?l.map(n=>h('button',{class:'nitem','aria-current':n.id===sel?'true':null,onclick:()=>{S.view.note[p.id]=n.id;S.view.noteOpen=true;render()}},
+      h('b',{},n.title||'Без названия'),h('span',{},fmtShort(ymd(new Date(n.updated||Date.now())))+' · '+((n.body||'').replace(/\s+/g,' ').slice(0,60)||'пусто'))))
+      :[h('span',{class:'status'},all.length?'Ничего не найдено':'Пока нет заметок')]))};
+  fill();const search=h('input',{class:'in',type:'search',placeholder:'Поиск по заметкам',id:'nq',value:S.view.q,'aria-label':'Поиск'});
+  search.addEventListener('input',()=>{S.view.q=search.value;fill()});
+  const n=sel?m[sel]:null;const ref=n?R.entry(p.id,n.id):null;
+  const ed=h('div',{class:'neditor'},n?[
+    h('div',{class:'tools'},h('button',{class:'btn sm back',onclick:()=>{S.view.noteOpen=false;render()}},'← Все заметки'),h('span',{class:'grow'}),
+      h('span',{class:'status'},words(n.body||'')+' сл.'),
+      h('button',{class:'icon',onclick:()=>{destroy(ref);S.view.note[p.id]=null;S.view.noteOpen=false;toast('Заметка удалена',true);render()}},'Удалить')),
+    inp(n.title,'Название','nt-'+n.id,v=>mutate(ref,d=>{d.title=v;d.updated=Date.now()},{typing:true}),'ntitle write'),
+    ta(n.body,'Пиши сюда. Править можно в любом месте, ничего переписывать не придётся.','nb-'+n.id,v=>mutate(ref,d=>{d.body=v;d.updated=Date.now()},{typing:true}),'write'),
+    h('span',{class:'status'},'Изменено '+new Date(n.updated||Date.now()).toLocaleString('ru-RU',{day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'}))]
+    :h('div',{class:'empty'},h('b',{},'Выбери заметку или создай новую'),'Заметки хранятся отдельно, поэтому их можно вести сколько угодно.'));
+  return[...head(p,'Свободные записи: мысли, идеи, списки. Название необязательно.'),
+    h('div',{class:'tools'},h('button',{class:'btn pri',onclick:()=>addNote(p)},'+ Новая заметка')),
+    h('div',{class:'notes','data-open':String(!!(S.view.noteOpen&&n))},h('div',{class:'nlist'},search,box),ed)]}
+
+/* ---------- tracker ---------- */
+function addHabit(p,name){const id='h'+uidn();act(p,d=>{d.habits.push({id,name})});S.focus=name?null:'hn-'+id;render()}
+function trackerView(p){const mo=S.view.month;const nd=daysIn(mo);const t=today();const cm=t.slice(0,7);const td=mo===cm?+t.slice(8):(mo<cm?nd:0);
+  const out=head(p,'Отмечай день одним нажатием. Прошедшие месяцы остаются в истории.');
+  out.push(h('div',{class:'tools'},h('button',{class:'btn sm',onclick:()=>{S.view.month=shiftMonth(mo,-1);render()},'aria-label':'Предыдущий месяц'},'←'),
+    h('b',{style:'text-transform:capitalize;min-width:11ch;text-align:center'},monthName(mo)),
+    h('button',{class:'btn sm',onclick:()=>{S.view.month=shiftMonth(mo,1);render()},'aria-label':'Следующий месяц'},'→'),
+    mo!==cm?h('button',{class:'btn quiet sm',onclick:()=>{S.view.month=cm;render()}},'К текущему'):null));
+  if(!p.habits.length){out.push(emptyBox('Добавь первую привычку','Выбери из подсказок или впиши свою ниже.',['Вода','Сон до 23:00','Прогулка','Чтение','Растяжка','Без телефона перед сном'],n=>addHabit(p,n)));return out}
+  const marks=p.marks[mo]||{};const stat=(c)=>c+' · '+Math.round(c/Math.max(1,td)*100)+'%';
+  const head1=h('tr',{},h('th',{class:'hn'},'Привычка'),Array.from({length:nd},(_,i)=>h('th',{class:(mo===cm&&i+1===td)?'today':''},i+1)),h('th',{class:'st'},'Итого'));
+  const rows=p.habits.map(hb=>{const set=new Set(marks[hb.id]||[]);const st=h('td',{class:'st'},stat(set.size));
+    return h('tr',{},h('td',{class:'hn'},h('div',{style:'display:flex;align-items:center;gap:2px'},
+        inp(hb.name,'Привычка','hn-'+hb.id,v=>edit(p,d=>{d.habits.find(x=>x.id===hb.id).name=v})),
+        h('button',{class:'icon',title:'Удалить привычку',onclick:()=>{act(p,d=>{d.habits=d.habits.filter(x=>x.id!==hb.id)});toast('Привычка удалена',true);render()}},'✕'))),
+      Array.from({length:nd},(_,i)=>{const day=i+1;const c=h('button',{class:'cell'+(set.has(day)?' on':'')+(day>td?' fut':''),'aria-label':hb.name+', '+day+' число','aria-pressed':String(set.has(day))});
+        c.addEventListener('click',()=>{const cur=mutate(R.page(p.id),d=>{const mm=d.marks[mo]||(d.marks[mo]={});const a=mm[hb.id]||(mm[hb.id]=[]);const k=a.indexOf(day);k>=0?a.splice(k,1):a.push(day)});
+          const on=((cur.marks[mo]||{})[hb.id]||[]);c.classList.toggle('on',on.includes(day));c.setAttribute('aria-pressed',String(on.includes(day)));st.textContent=stat(on.length)});
+        return h('td',{},c)}),st)});
+  const sc=h('div',{class:'tscroll'},h('table',{class:'tgrid'},h('thead',{},head1),h('tbody',{},rows)));
+  out.push(sc);requestAnimationFrame(()=>{if(mo===cm)sc.scrollLeft=Math.max(0,(td-4)*32)});
+  const nin=h('input',{class:'in',placeholder:'Новая привычка',id:'hnew','aria-label':'Новая привычка'});
+  const add=()=>{if(nin.value.trim())addHabit(p,nin.value.trim())};nin.addEventListener('keydown',e=>{if(e.key==='Enter')add()});
+  out.push(h('div',{class:'tools',style:'margin-top:14px;max-width:420px'},nin,h('button',{class:'btn',onclick:add},'Добавить')));
+  return out}
+
+/* ---------- day ---------- */
+const KINDS={moments:'Пункты с цветом',scale:'Оценка 1–5',line:'Строка',long:'Текст',tasks:'Список дел'};
+const setVal=(p,date,fn,typing)=>mutate(R.entry(p.id,date),d=>{fn(d.values);d.updated=Date.now()},{typing,init:{date,values:{},updated:Date.now()}});
+function fieldEl(p,date,f,e){const val=e&&e.values?e.values[f.id]:undefined;let body;
+  if(f.kind==='scale')body=h('div',{class:'scale',role:'group','aria-label':f.label},[1,2,3,4,5].map(n=>h('button',{class:val===n?'on':'','aria-pressed':String(val===n),
+    onclick:()=>{setVal(p,date,v=>{v[f.id]=val===n?null:n});render()}},n)));
+  else if(f.kind==='line')body=inp(val||'','','fv-'+f.id,v=>setVal(p,date,x=>{x[f.id]=v},true),'write');
+  else if(f.kind==='long')body=ta(val||'','Пиши свободно','fv-'+f.id,v=>setVal(p,date,x=>{x[f.id]=v},true),'write');
+  else if(f.kind==='moments')body=momentsEl(p,date,f,e);
+  else{const arr=Array.isArray(val)?val:[];const n=Math.max(3,arr.length);
+    body=h('div',{},Array.from({length:n},(_,i)=>{const it=arr[i]||{t:'',d:false};
+      return h('div',{class:'row'+(it.d?' done':'')},h('input',{type:'checkbox',class:'ck',checked:it.d,'aria-label':'Сделано',
+        onchange:ev=>{const c=ev.target.checked;setVal(p,date,x=>{const a=x[f.id]||(x[f.id]=[]);while(a.length<=i)a.push({t:'',d:false});a[i].d=c});render()}}),
+        h('div',{class:'grow'},inp(it.t,'Пункт '+(i+1),'fv-'+f.id+'-'+i,v=>setVal(p,date,x=>{const a=x[f.id]||(x[f.id]=[]);while(a.length<=i)a.push({t:'',d:false});a[i].t=v},true),'write strk')))}),
+      h('button',{class:'btn quiet sm',onclick:()=>{setVal(p,date,x=>{const a=x[f.id]||(x[f.id]=[]);while(a.length<Math.max(3,n+1))a.push({t:'',d:false})});S.focus='fv-'+f.id+'-'+n;render()}},'+ Строка'))}
+  return h('div',{class:'field'},h('div',{class:'lab'},f.label),body)}
+function fieldsPanel(p){const mv=(i,dx)=>{act(p,d=>{const a=d.fields;const j=i+dx;if(j<0||j>=a.length)return;[a[i],a[j]]=[a[j],a[i]]});render()};
+  const sel=h('select',{class:'date-in',id:'fk','aria-label':'Тип поля'},Object.entries(KINDS).map(([k,v])=>h('option',{value:k},v)));
+  const nin=h('input',{class:'in',placeholder:'Название нового поля',id:'fnew'});
+  const add=()=>{const l=nin.value.trim();if(!l)return;const id='f'+uidn();act(p,d=>{d.fields.push({id,label:l,kind:sel.value})});render()};
+  nin.addEventListener('keydown',e=>{if(e.key==='Enter')add()});
+  return h('div',{class:'field'},h('div',{class:'lab'},'Поля записи'),
+    p.fields.map((f,i)=>h('div',{class:'fedit'},inp(f.label,'Название поля','fl-'+f.id,v=>edit(p,d=>{d.fields.find(x=>x.id===f.id).label=v})),
+      h('span',{class:'status'},KINDS[f.kind]),h('button',{class:'icon neutral','aria-label':'Выше',onclick:()=>mv(i,-1)},'↑'),h('button',{class:'icon neutral','aria-label':'Ниже',onclick:()=>mv(i,1)},'↓'),
+      h('button',{class:'icon','aria-label':'Удалить поле',onclick:()=>{act(p,d=>{d.fields=d.fields.filter(x=>x.id!==f.id)});toast('Поле удалено. Старые записи сохранены',true);render()}},'✕'))),
+    h('div',{class:'fedit'},nin,sel,h('button',{class:'btn sm',onclick:add},'Добавить')))}
+function dayView(p){const m=S.entries[p.id]||{};const date=S.view.date;const e=m[date]||null;const t=today();
+  const out=head(p,'Одна запись на дату. Поля можно переименовать, переставить, добавить свои.');
+  const jump=h('input',{type:'date',class:'date-in',value:date,'aria-label':'Перейти к дате',onchange:ev=>{if(ev.target.value){S.view.date=ev.target.value;render()}}});
+  out.push(h('div',{class:'daynav'},h('button',{class:'btn sm','aria-label':'Предыдущий день',onclick:()=>{S.view.date=addDays(date,-1);render()}},'←'),
+    h('h2',{},fmtLong(date)+(date===t?' · сегодня':'')),h('button',{class:'btn sm','aria-label':'Следующий день',onclick:()=>{S.view.date=addDays(date,1);render()}},'→'),
+    jump,date!==t?h('button',{class:'btn quiet sm',onclick:()=>{S.view.date=t;render()}},'Сегодня'):null));
+  p.fields.forEach(f=>out.push(fieldEl(p,date,f,e)));
+  if(!p.fields.length)out.push(emptyBox('Полей пока нет','Добавь первое поле ниже: оценка дня, список дел или свободный текст.',[],null));
+  out.push(h('div',{class:'tools',style:'margin-top:20px'},h('button',{class:'btn quiet sm',onclick:()=>{S.view.fieldsEdit=!S.view.fieldsEdit;render()}},S.view.fieldsEdit?'Готово':'Настроить поля')));
+  if(S.view.fieldsEdit)out.push(fieldsPanel(p));
+  const sc=p.fields.find(f=>f.kind==='scale');const tx=p.fields.filter(f=>f.kind==='long'||f.kind==='line');
+  const recs=Object.values(m).filter(x=>x&&x.date&&x.values).sort((a,b)=>b.date.localeCompare(a.date)).slice(0,30);
+  if(recs.length)out.push(h('div',{class:'recent'},h('h3',{},'Недавние записи'),recs.map(r=>{
+    const sv=sc?r.values[sc.id]:null;const text=tx.map(f=>r.values[f.id]).find(v=>v&&String(v).trim());
+    return h('button',{class:'rec','aria-current':r.date===date?'true':null,onclick:()=>{S.view.date=r.date;render();window.scrollTo(0,0)}},
+      h('time',{},fmtShort(r.date)),h('span',{},(sv?sv+'/5 · ':'')+(text?String(text).replace(/\s+/g,' '):'без текста')))})));
+  return out}
+
+/* ---------- helpers for new features ---------- */
+const L=(o,k)=>o[k]||(o[k]=[]);
+const okUrl=u=>/^https?:\/\//i.test((u||'').trim());
+const fmtMin=m=>{m=Math.round(m||0);const a=Math.floor(m/60),b=m%60;return a?(a+' ч'+(b?' '+b+' мин':'')):(b+' мин')};
+const HUES=[25,55,90,150,185,230,265,305,350,-1];
+const mcol=x=>x<0?'oklch(.68 0 0)':'oklch(.72 .13 '+x+')';
+const dotEl=c=>h('span',{class:'mdot',style:'background:'+c});
+const DEF_MOODS=[{id:'m1',name:'Смешно',h:90},{id:'m2',name:'Грустно',h:250},{id:'m3',name:'Спокойно',h:150},{id:'m4',name:'Тревожно',h:25}];
+const moodsOf=p=>p.moods||DEF_MOODS;
+function migrate(){for(const p of S.pages){if(p.type==='day'&&Array.isArray(p.fields)){
+  const f=p.fields.find(x=>x.id==='f4'&&x.kind==='long'&&x.label==='Как прошёл день');
+  if(f&&!busy(R.page(p.id).path)){f.kind='moments';queue(R.page(p.id),p,60)}}}}
+
+/* ---------- day: colored moments ---------- */
+function hueBtns(cur,fn){return h('div',{class:'hues',role:'group','aria-label':'Цвет'},HUES.map(x=>
+  h('button',{class:'hue',type:'button','aria-pressed':String(cur===x),'aria-label':'Цвет',style:'background:'+mcol(x),onclick:()=>fn(x)})))}
+function moodEditor(p){
+  const ed=fn=>{act(p,d=>{if(!d.moods)d.moods=clone(DEF_MOODS);fn(d.moods)});render()};
+  const nm=h('input',{class:'in',id:'mnew',placeholder:'Название нового цвета, например «Горжусь»','aria-label':'Название нового цвета'});
+  const add=()=>{const n=nm.value.trim();if(!n)return;ed(a=>{a.push({id:'m'+uidn(),name:n,h:S.view.newHue})})};
+  nm.addEventListener('keydown',e=>{if(e.key==='Enter')add()});
+  return h('div',{class:'field'},h('div',{class:'lab'},'Цвета и их названия'),
+    moodsOf(p).map(m=>h('div',{class:'fedit'},dotEl(mcol(m.h)),
+      inp(m.name,'Название','mn-'+m.id,v=>edit(p,d=>{if(!d.moods)d.moods=clone(DEF_MOODS);const x=d.moods.find(y=>y.id===m.id);if(x)x.name=v})),
+      hueBtns(m.h,x=>ed(a=>{const y=a.find(z=>z.id===m.id);if(y)y.h=x})),
+      h('button',{class:'icon','aria-label':'Удалить цвет',onclick:()=>{ed(a=>{a.splice(a.findIndex(z=>z.id===m.id),1)});toast('Цвет удалён',true)}},'✕'))),
+    h('div',{class:'fedit'},dotEl(mcol(S.view.newHue)),nm,hueBtns(S.view.newHue,x=>{S.view.newHue=x;render()}),h('button',{class:'btn sm',onclick:add},'Добавить')),
+    h('button',{class:'btn quiet sm',onclick:()=>{S.view.moodEdit=false;render()}},'Готово'))}
+function momentsEl(p,date,f,e){
+  const val=e&&e.values&&Array.isArray(e.values[f.id])?e.values[f.id]:[];const moods=moodsOf(p);
+  const upd=(id,fn,typing)=>setVal(p,date,v=>{const it=(v[f.id]||[]).find(x=>x.id===id);if(it)fn(it)},typing);
+  const items=val.map(it=>{const m=moods.find(x=>x.id===it.c);const pk=S.view.pick===it.id;const open=!!S.view.open[it.id];const has=!!(it.x&&it.x.trim());
+    return h('div',{class:'moment'},
+      h('div',{class:'row'},
+        h('button',{class:'mpick',type:'button',title:'Выбрать цвет','aria-label':'Цвет пункта','aria-expanded':String(pk),onclick:()=>{S.view.pick=pk?null:it.id;render()}},
+          m?dotEl(mcol(m.h)):h('span',{class:'mdot empty'})),
+        h('div',{class:'grow'},inp(it.t,'Что было','mt-'+it.id,v=>upd(it.id,x=>{x.t=v},true),'write')),
+        m?h('span',{class:'mname'},m.name||'без названия'):null,
+        h('button',{class:'icon',title:'Удалить пункт',onclick:()=>{setVal(p,date,v=>{v[f.id]=(v[f.id]||[]).filter(x=>x.id!==it.id)});toast('Пункт удалён',true);render()}},'✕')),
+      pk?h('div',{class:'chips mpal'},moods.map(mm=>h('button',{class:'chip','aria-pressed':String(it.c===mm.id),
+          onclick:()=>{upd(it.id,x=>{x.c=it.c===mm.id?null:mm.id});S.view.pick=null;render()}},dotEl(mcol(mm.h)),' '+(mm.name||'без названия'))),
+        h('button',{class:'chip',onclick:()=>{S.view.moodEdit=true;S.view.pick=null;render()}},'Изменить цвета')):null,
+      h('div',{class:'mtext'},
+        h('button',{class:'btn quiet sm','aria-expanded':String(open),onclick:()=>{S.view.open[it.id]=!open;if(!open)S.focus='mx-'+it.id;render()}},(open?'▾ Текст':(has?'▸ Текст':'▸ Добавить текст'))),
+        !open&&has?h('span',{class:'status mprev'},it.x.replace(/\s+/g,' ').slice(0,90)):null),
+      open?ta(it.x,'Подробнее: что произошло, что почувствовала','mx-'+it.id,v=>upd(it.id,x=>{x.x=v},true),'write'):null)});
+  const addB=h('button',{class:'btn quiet sm',onclick:()=>{const id='k'+uidn();setVal(p,date,v=>{L(v,f.id).push({id,t:'',c:null,x:''})});S.focus='mt-'+id;render()}},'+ Пункт');
+  return h('div',{},items,h('div',{class:'tools'},addB,h('button',{class:'btn quiet sm',onclick:()=>{S.view.moodEdit=!S.view.moodEdit;render()}},'Цвета и названия')),
+    S.view.moodEdit?moodEditor(p):null)}
+
+/* ---------- study plan ---------- */
+const DEF_PH=[{id:'s1',name:'Не начато'},{id:'s2',name:'В процессе'},{id:'s3',name:'Нужно повторить'},{id:'s4',name:'Готово'}];
+const mondayOf=s=>{const d=parseD(s);d.setDate(d.getDate()-((d.getDay()+6)%7));return ymd(d)};
+const phOf=t=>t.phases&&t.phases.length?t.phases:DEF_PH;
+const stOf=t=>phOf(t).find(x=>x.id===t.status)||phOf(t)[0];
+const minsOf=t=>(t.sess||[]).reduce((a,s)=>a+(+s.min||0),0);
+function linkRows(items,pre,upd,del){return items.map(i=>h('div',{class:'fedit'},
+  inp(i.t,'Название','lt-'+pre+i.id,v=>upd(i.id,'t',v)),inp(i.u,'https://…','lu-'+pre+i.id,v=>upd(i.id,'u',v)),
+  okUrl(i.u)?h('a',{href:i.u.trim(),target:'_blank',rel:'noopener',class:'icon neutral',title:'Открыть','aria-label':'Открыть ссылку'},'↗'):null,
+  h('button',{class:'icon','aria-label':'Удалить',onclick:()=>del(i.id)},'✕')))}
+function sec(t,k,title,meta,body){const key=t.id+k;const open=S.view.sec[key]!==false;
+  return h('section',{class:'tsec'},h('button',{class:'tsec-h','aria-expanded':String(open),onclick:()=>{S.view.sec[key]=!open;render()}},
+    h('span',{},(open?'▾ ':'▸ ')+title),meta?h('small',{},meta):null),open?h('div',{class:'tsec-b'},body):null)}
+const ASSET_TYPES={pdf:'application/pdf',png:'image/png',jpg:'image/jpeg',jpeg:'image/jpeg',gif:'image/gif',webp:'image/webp',txt:'text/plain',md:'text/markdown',csv:'text/csv',json:'application/json'};
+async function attachOld(p,t,file){const ext=(file.name.split('.').pop()||'').toLowerCase();
+  if(ext==='doc'||ext==='docx'){toast('Word-файл сюда не загрузить. Сохрани его как PDF и прикрепи снова');return}
+  const type=ASSET_TYPES[ext];if(!type){toast('Этот формат не поддерживается. Подходят PDF, png, jpg, webp, gif, txt, md');return}
+  try{const as=await claude.use('assets');if(!as){toast('Загрузка файлов здесь недоступна');return}
+    toast('Загружаю «'+file.name+'»…');const r=await as.upload(file,{type});
+    mutate(R.entry(p.id,t.id),d=>{L(d,'mats').push({id:'f'+uidn(),kind:'file',t:file.name,a:r.id,ct:r.contentType||type});d.updated=Date.now()});
+    toast('Файл прикреплён');render()}
+  catch(e){toast('Не удалось загрузить файл'+(e&&e.code?' ('+e.code+')':''))}}
+
+function topicCard(p,t){
+  const ref=R.entry(p.id,t.id);const tm=(fn,typing)=>mutate(ref,d=>{d.updated=Date.now();fn(d)},{typing});
+  const by=(d,k,id)=>L(d,k).find(x=>x.id===id);
+  const upd=k=>(id,f,v)=>tm(d=>{const x=by(d,k,id);if(x)x[f]=v},true);
+  const del=k=>id=>{tm(d=>{d[k]=L(d,k).filter(x=>x.id!==id)});toast('Удалено',true);render()};
+  const phases=phOf(t);const st=stOf(t);const T=today();
+  const phEd=fn=>{tm(d=>{if(!d.phases||!d.phases.length)d.phases=clone(DEF_PH);fn(d)});render()};
+  const stat=h('div',{class:'field'},h('div',{class:'lab'},'Статус'),
+    h('div',{class:'opts'},phases.map(ph=>h('button',{class:'btn','aria-pressed':String(ph.id===st.id),onclick:()=>{tm(d=>{d.status=ph.id});render()}},ph.name||'без названия')),
+      h('button',{class:'btn quiet sm',onclick:()=>{S.view.phEdit=!S.view.phEdit;render()}},S.view.phEdit?'Готово':'Изменить этапы')),
+    S.view.phEdit?h('div',{style:'margin-top:8px'},phases.map(ph=>h('div',{class:'fedit'},
+      inp(ph.name,'Название этапа','pn-'+ph.id,v=>tm(d=>{if(!d.phases||!d.phases.length)d.phases=clone(DEF_PH);const x=d.phases.find(y=>y.id===ph.id);if(x)x.name=v},true)),
+      h('button',{class:'icon','aria-label':'Удалить этап',disabled:phases.length<2,onclick:()=>{phEd(d=>{d.phases=d.phases.filter(y=>y.id!==ph.id);if(d.status===ph.id)d.status=null});toast('Этап удалён',true)}},'✕'))),
+      h('button',{class:'btn quiet sm',onclick:()=>{const id='s'+uidn();phEd(d=>{d.phases.push({id,name:''})});S.focus='pn-'+id}},'+ Этап')):null);
+  const pr=t.prac||[];
+  const prac=h('div',{},pr.map(x=>h('div',{class:'row'+(x.d?' done':'')},
+    h('input',{type:'checkbox',class:'ck',checked:x.d,'aria-label':'Сделано',onchange:e=>{const v=e.target.checked;tm(d=>{const y=by(d,'prac',x.id);if(y)y.d=v});render()}}),
+    h('div',{class:'grow'},ta(x.t,'Например: решить 10 задач, пересказать своими словами','pt-'+x.id,v=>upd('prac')(x.id,'t',v),'write strk')),
+    h('button',{class:'icon','aria-label':'Удалить',onclick:()=>del('prac')(x.id)},'✕'))),
+    h('button',{class:'btn quiet sm',onclick:()=>{const id='q'+uidn();tm(d=>{L(d,'prac').push({id,t:'',d:false})});S.focus='pt-'+id;render()}},'+ Задание'));
+  const revs=t.revs||[];
+  const dates=h('div',{},h('div',{class:'meta'},
+    h('label',{},'Изучено ',h('input',{type:'date',class:'date-in',value:t.studied||'',onchange:e=>{const v=e.target.value;tm(d=>{d.studied=v});render()}})),
+    h('button',{class:'btn sm',disabled:!t.studied,title:t.studied?'':'Сначала укажи дату изучения',onclick:()=>{tm(d=>{d.revs=[{id:'r'+uidn(),date:addDays(d.studied,3),done:false},{id:'r'+uidn(),date:addDays(d.studied,14),done:false}]});render()}},'Повторы через 3 и 14 дней')),
+    revs.map(r=>h('div',{class:'row'+(r.done?' done':'')},
+      h('input',{type:'checkbox',class:'ck',checked:r.done,'aria-label':'Повторено',onchange:e=>{const v=e.target.checked;tm(d=>{const y=by(d,'revs',r.id);if(y)y.done=v});render()}}),
+      h('input',{type:'date',class:'date-in','aria-label':'Дата повторения',value:r.date||'',onchange:e=>{const v=e.target.value;tm(d=>{const y=by(d,'revs',r.id);if(y)y.date=v});render()}}),
+      !r.done&&r.date&&r.date<=T?h('span',{class:'due'},r.date<T?'просрочено':'сегодня'):null,
+      h('button',{class:'icon','aria-label':'Удалить дату',onclick:()=>del('revs')(r.id)},'✕'))),
+    h('button',{class:'btn quiet sm',onclick:()=>{tm(d=>{L(d,'revs').push({id:'r'+uidn(),date:addDays(T,3),done:false})});render()}},'+ Дата повторения'));
+  const mats=t.mats||[];const files=mats.filter(m=>m.kind==='file');const lks=mats.filter(m=>m.kind==='link');
+  const fin=h('input',{type:'file',id:'fup',hidden:true});
+  fin.addEventListener('change',()=>{const f=fin.files&&fin.files[0];if(f)attach(p,t,f);fin.value=''});
+  const matsEl=h('div',{},files.map(m=>fileRow(m,del('mats'))),
+    linkRows(lks,'m',upd('mats'),del('mats')),
+    h('div',{class:'tools'},S.local?null:h('button',{class:'btn sm',onclick:()=>fin.click()},'+ Прикрепить файл'),fin,
+      h('button',{class:'btn quiet sm',onclick:()=>{tm(d=>{L(d,'mats').push({id:'l'+uidn(),kind:'link',t:'',u:''})});render()}},'+ Ссылка на выполненное задание')),
+    h('p',{class:'status',style:'margin:0'},'Любые файлы до 20 МБ: PDF, Word, картинки. Они сохраняются в твоём репозитории на GitHub.'));
+  const qs=t.qs||[];
+  const ques=h('div',{},qs.map(x=>h('div',{class:'row'+(x.r?' done':'')},
+    h('input',{type:'checkbox',class:'ck',checked:x.r,'aria-label':'Разобрано',onchange:e=>{const v=e.target.checked;tm(d=>{const y=by(d,'qs',x.id);if(y)y.r=v});render()}}),
+    h('div',{class:'grow'},ta(x.t,'Что непонятно или где пробел','qt-'+x.id,v=>upd('qs')(x.id,'t',v),'write strk')),
+    h('button',{class:'icon','aria-label':'Удалить',onclick:()=>del('qs')(x.id)},'✕'))),
+    h('button',{class:'btn quiet sm',onclick:()=>{const id='w'+uidn();tm(d=>{L(d,'qs').push({id,t:'',r:false})});S.focus='qt-'+id;render()}},'+ Вопрос'));
+  const rf=t.refl||{};const rset=k=>v=>tm(d=>{(d.refl||(d.refl={}))[k]=v},true);
+  const refl=h('div',{},[['easy','Что далось легко'],['stuck','Где застряла'],['adjust','Что поправить на следующей неделе']].map(([k,l])=>
+    h('div',{class:'field',style:'margin-top:8px'},h('div',{class:'lab'},l),ta(rf[k]||'','…','rf-'+k+t.id,rset(k),'write'))));
+  const sess=(t.sess||[]).slice().sort((a,b)=>(b.date||'').localeCompare(a.date||''));const tot=minsOf(t);
+  const addS=(date,min)=>{min=Math.round(+min);if(!(min>0)){toast('Укажи минуты');return}tm(d=>{L(d,'sess').push({id:'z'+uidn(),date:date||T,min})});render()};
+  const sd=h('input',{type:'date',class:'date-in',value:T,'aria-label':'Дата сессии',id:'sd'});
+  const sm=h('input',{type:'number',class:'date-in',min:1,step:5,placeholder:'мин',style:'width:80px','aria-label':'Минуты',id:'sm'});
+  const sessEl=h('div',{},h('div',{class:'meta'},sd,sm,h('button',{class:'btn sm',onclick:()=>addS(sd.value,sm.value)},'Добавить сессию'),
+      [15,30,45,60].map(n=>h('button',{class:'chip',onclick:()=>addS(T,n)},'+'+n))),
+    sess.map(s=>h('div',{class:'row'},h('span',{class:'status',style:'min-width:9ch'},s.date?fmtShort(s.date):''),h('span',{class:'grow'},fmtMin(s.min)),
+      h('button',{class:'icon','aria-label':'Удалить сессию',onclick:()=>del('sess')(s.id)},'✕'))));
+  const lk=h('div',{},linkRows(t.links||[],'k',upd('links'),del('links')),
+    h('button',{class:'btn quiet sm',onclick:()=>{tm(d=>{L(d,'links').push({id:'k'+uidn(),t:'',u:''})});render()}},'+ Ссылка'));
+  return[h('div',{class:'tools'},h('button',{class:'btn sm back',onclick:()=>{S.view.noteOpen=false;render()}},'← Все темы'),h('span',{class:'grow'}),
+      h('button',{class:'icon',onclick:()=>{destroy(ref);S.view.topic[p.id]=null;S.view.noteOpen=false;toast('Тема удалена',true);render()}},'Удалить тему')),
+    inp(t.title,'Название темы','tt-'+t.id,v=>tm(d=>{d.title=v},true),'ntitle write'),
+    stat,
+    sec(t,'p','Практика и проверка',pr.length?pr.filter(x=>x.d).length+' из '+pr.length:'',prac),
+    sec(t,'d','Даты повторения',t.studied?'изучено '+fmtShort(t.studied):'',dates),
+    sec(t,'k','Полезные ссылки',(t.links||[]).length||'',lk),
+    sec(t,'m','Мои материалы',mats.length||'',matsEl),
+    sec(t,'q','Вопросы и пробелы',qs.length?qs.filter(x=>!x.r).length+' открыто':'',ques),
+    sec(t,'r','Мини-рефлексия','',refl),
+    sec(t,'s','Трекер сессий',tot?fmtMin(tot)+' · '+(t.sess||[]).length+' сесс.':'',sessEl)]}
+
+function allTopics(p){return Object.values(S.entries[p.id]||{}).filter(Boolean).sort((a,b)=>(a.created||0)-(b.created||0))}
+function goalTab(p){
+  const g=p.goal||{};const gm=(fn,typing)=>mutate(R.page(p.id),d=>{fn(d.goal||(d.goal={result:'',deadline:'',hours:5,res:[]}))},{typing});
+  const T=today();const tops=allTopics(p);const totalMin=tops.reduce((a,t)=>a+minsOf(t),0);
+  const left=g.deadline?Math.max(0,Math.ceil((parseD(g.deadline)-parseD(T))/604800000)):null;
+  const info=[];
+  if(left!=null){info.push(left+' нед. до дедлайна');if(+g.hours)info.push('по плану ещё '+Math.round(left*g.hours)+' ч')}
+  info.push('уже занималась: '+fmtMin(totalMin));
+  const res=g.res||[];
+  const upd=(id,f,v)=>gm(x=>{const r=L(x,'res').find(y=>y.id===id);if(r)r[f]=v},true);
+  return h('div',{},
+    h('p',{class:'lead'},'Заполняется один раз перед стартом, чтобы не терять фокус.'),
+    h('div',{class:'field'},h('label',{for:'g-res'},'Конечный результат'),ta(g.result,'Что конкретно должно появиться: проект, сданный экзамен, уверенный разговор на тему','g-res',v=>gm(x=>{x.result=v},true),'write')),
+    h('div',{class:'field'},h('div',{class:'lab'},'Дедлайн и ритм'),
+      h('div',{class:'meta'},h('label',{},'Дата окончания ',h('input',{type:'date',class:'date-in',id:'g-dl',value:g.deadline||'',onchange:e=>{const v=e.target.value;gm(x=>{x.deadline=v});render()}})),
+        h('label',{},'Часов в неделю ',h('input',{type:'number',class:'date-in',id:'g-h',min:0,step:.5,style:'width:80px',value:g.hours==null?'':g.hours,
+          oninput:e=>{const v=e.target.value;gm(x=>{x.hours=v===''?null:+v},true)},onchange:()=>render()}))),
+      h('p',{class:'status',style:'margin:6px 0 0'},info.join(' · '))),
+    h('div',{class:'field'},h('div',{class:'lab'},'Ресурсы'),linkRows(res,'g',upd,id=>{gm(x=>{x.res=L(x,'res').filter(y=>y.id!==id)});toast('Удалено',true);render()}),
+      h('button',{class:'btn quiet sm',onclick:()=>{gm(x=>{L(x,'res').push({id:'e'+uidn(),t:'',u:''})});render()}},'+ Ресурс')))}
+function topicsTab(p){
+  const m=S.entries[p.id]||{};const all=allTopics(p);const flt=S.view.sfilter;
+  const names=[...new Set(all.map(t=>stOf(t).name))];const list=all.filter(t=>!flt||stOf(t).name===flt);
+  let sel=S.view.topic[p.id];if(!m[sel])sel=null;if(!sel&&list[0]&&matchMedia('(min-width:781px)').matches)sel=list[0].id;
+  const t=sel?m[sel]:null;
+  const add=()=>{const id='t'+uidn();create(R.entry(p.id,id),{id,title:'',created:Date.now(),updated:Date.now(),status:'s1',phases:clone(DEF_PH)});
+    S.view.topic[p.id]=id;S.view.noteOpen=true;S.focus='tt-'+id;render()};
+  const nextRev=t=>{const d=(t.revs||[]).filter(r=>!r.done&&r.date).map(r=>r.date).sort()[0];return d};
+  const items=list.length?list.map(x=>{const nr=nextRev(x);return h('button',{class:'nitem','aria-current':x.id===sel?'true':null,onclick:()=>{S.view.topic[p.id]=x.id;S.view.noteOpen=true;render()}},
+      h('b',{},x.title||'Без названия'),h('span',{},stOf(x).name+(minsOf(x)?' · '+fmtMin(minsOf(x)):'')+(nr?' · повтор '+fmtShort(nr):'')))})
+    :[h('span',{class:'status'},all.length?'В этом этапе тем нет':'Тем пока нет')];
+  return h('div',{},
+    h('p',{class:'lead'},'Одна карточка на тему. Статус, практика, повторения, материалы и время хранятся внутри неё.'),
+    h('div',{class:'tools'},h('button',{class:'btn pri',onclick:add},'+ Новая тема'),
+      all.length?h('span',{class:'status'},'Тем: '+all.length+' · всего времени: '+fmtMin(all.reduce((a,x)=>a+minsOf(x),0))):null),
+    names.length>1?h('div',{class:'chips',style:'margin:0 0 12px'},h('button',{class:'chip','aria-pressed':String(!flt),onclick:()=>{S.view.sfilter='';render()}},'Все'),
+      names.map(n=>h('button',{class:'chip','aria-pressed':String(flt===n),onclick:()=>{S.view.sfilter=flt===n?'':n;render()}},n))):null,
+    h('div',{class:'notes','data-open':String(!!(S.view.noteOpen&&t))},h('div',{class:'nlist'},items),
+      h('div',{class:'neditor'},t?topicCard(p,t):h('div',{class:'empty'},h('b',{},'Выбери тему или создай новую'),'Например: «Условные предложения» или «Производная функции».'))))}
+function weeksTab(p){
+  const g=p.goal||{};const wk=S.view.week||mondayOf(today());const end=addDays(wk,6);const w=(p.weeks||{})[wk]||{};
+  const wm=(fn,typing)=>mutate(R.page(p.id),d=>{fn((d.weeks||(d.weeks={}))[wk]||(d.weeks[wk]={}))},{typing});
+  const m=S.entries[p.id]||{};const tops=allTopics(p);const inW=s=>s>=wk&&s<=end;
+  const wmin=t=>(t.sess||[]).filter(s=>inW(s.date)).reduce((a,s)=>a+(+s.min||0),0);
+  const logged=tops.reduce((a,t)=>a+wmin(t),0);const plan=w.plan!=null?+w.plan:(+g.hours||0);
+  const pct=plan?Math.min(100,Math.round(logged/60/plan*100)):0;
+  const ids=(w.topics||[]).filter(id=>m[id]);const rest=tops.filter(t=>!ids.includes(t.id));
+  const due=tops.map(t=>({t,r:(t.revs||[]).filter(r=>!r.done&&r.date&&r.date<=end).map(r=>r.date).sort()[0]})).filter(x=>x.r);
+  const sel=h('select',{class:'date-in',id:'wadd','aria-label':'Добавить тему на неделю'},h('option',{value:''},'+ Добавить тему на неделю'),rest.map(t=>h('option',{value:t.id},t.title||'Без названия')));
+  sel.addEventListener('change',()=>{if(sel.value){const v=sel.value;wm(x=>{L(x,'topics').push(v)});render()}});
+  return h('div',{},
+    h('p',{class:'lead'},'Планируй неделю и сверяй с тем, сколько времени ушло на самом деле. Часы берутся из трекера сессий в карточках тем.'),
+    h('div',{class:'daynav'},h('button',{class:'btn sm','aria-label':'Предыдущая неделя',onclick:()=>{S.view.week=addDays(wk,-7);render()}},'←'),
+      h('h2',{},fmtShort(wk)+' – '+fmtShort(end)+(wk===mondayOf(today())?' · эта неделя':'')),
+      h('button',{class:'btn sm','aria-label':'Следующая неделя',onclick:()=>{S.view.week=addDays(wk,7);render()}},'→'),
+      wk!==mondayOf(today())?h('button',{class:'btn quiet sm',onclick:()=>{S.view.week=null;render()}},'Сегодня'):null),
+    h('div',{class:'field'},h('div',{class:'lab'},'Часы'),
+      h('div',{class:'meta'},h('label',{},'План ',h('input',{type:'number',class:'date-in',id:'wplan',min:0,step:.5,style:'width:80px',value:plan||'',oninput:e=>{const v=e.target.value;wm(x=>{x.plan=v===''?null:+v},true)},onchange:()=>render()}),' ч'),
+        h('span',{},'Факт: '+fmtMin(logged)),plan?h('span',{},pct+'%'):null),
+      plan?h('div',{class:'bar',role:'progressbar','aria-valuenow':pct,'aria-valuemin':0,'aria-valuemax':100},h('i',{style:'width:'+pct+'%'})):null),
+    h('div',{class:'field'},h('div',{class:'lab'},'Темы этой недели'),
+      ids.map(id=>{const t=m[id];return h('div',{class:'fedit'},h('span',{class:'grow'},t.title||'Без названия'),h('span',{class:'status'},stOf(t).name+' · '+fmtMin(wmin(t))),
+        h('button',{class:'icon','aria-label':'Убрать с недели',onclick:()=>{wm(x=>{x.topics=L(x,'topics').filter(i=>i!==id)});render()}},'✕'))}),
+      rest.length?sel:(tops.length?null:h('p',{class:'status'},'Сначала создай темы на вкладке «Темы».'))),
+    due.length?h('div',{class:'field'},h('div',{class:'lab'},'Пора повторить'),due.map(x=>h('div',{class:'fedit'},h('span',{class:'grow'},x.t.title||'Без названия'),
+      h('span',{class:x.r<today()?'due':'status'},fmtShort(x.r))))):null,
+    h('div',{class:'field'},h('label',{for:'wnote'},'Итоги недели'),ta(w.note,'Что получилось, где застряла, нужно ли поправить нагрузку на следующую неделю','wnote',v=>wm(x=>{x.note=v},true),'write')))}
+function studyView(p){const tab=S.view.stab[p.id]||'goal';
+  const tabs=h('div',{class:'opts',role:'tablist',style:'margin-bottom:18px'},[['goal','1. Цель'],['topics','2. Темы'],['weeks','3. Неделя']].map(([k,l])=>
+    h('button',{class:'btn',role:'tab','aria-selected':String(tab===k),'aria-pressed':String(tab===k),onclick:()=>{S.view.stab[p.id]=k;S.view.noteOpen=false;render()}},l)));
+  return[...head(p,'Три уровня: цель, база тем и недельный ритм.'),tabs,tab==='topics'?topicsTab(p):tab==='weeks'?weeksTab(p):goalTab(p)]}
+
+/* ---------- new page, settings, backup ---------- */
+function createPage(type){commitEdits();const p=newPageData(type);const before=clone(S.settings);
+  setLocal(R.page(p.id).path,p);queue(R.page(p.id),p,60);
+  S.settings.order=[...visible().map(x=>x.id).filter(i=>i!==p.id),...S.pages.filter(x=>x.archived).map(x=>x.id),p.id];
+  queue(R.settings(),S.settings,60);
+  pushHist([{ref:R.page(p.id),before:null,after:clone(p)},{ref:R.settings(),before,after:clone(S.settings)}]);
+  S.ui.newPage=false;go(p.id)}
+function newPagePanel(){const close=()=>{S.ui.newPage=false;render()};
+  const ov=h('div',{class:'ov',onclick:e=>{if(e.target===ov)close()}},h('div',{class:'panel',role:'dialog','aria-label':'Новая страница'},
+    h('div',{class:'tools'},h('h2',{style:'flex:1'},'Новая страница'),h('button',{class:'btn sm',onclick:close},'Закрыть')),
+    h('div',{class:'types'},Object.entries(TYPES).map(([k,v])=>h('button',{onclick:()=>createPage(k)},h('b',{},v.name),h('span',{},v.desc))))));
+  return ov}
+function setS(fn){mutate(R.settings(),fn);applyTheme();render()}
+function order(){return[...visible().map(p=>p.id),...S.pages.filter(p=>p.archived).map(p=>p.id)]}
+function archive(id,on){const p=S.pages.find(x=>x.id===id);if(!p)return;
+  mutate(R.page(id),d=>{d.archived=on});
+  if(on&&S.cur===id){S.cur=(visible()[0]||{}).id||null;selectEntries()}
+  if(on)toast('Страница в архиве. Её можно вернуть в настройках',true);render()}
+function settingsPanel(){const s=S.settings;const close=()=>{S.ui.settings=false;render()};
+  const opt=(cur,val,label,key)=>h('button',{class:'btn',type:'button','aria-pressed':String(cur===val),onclick:()=>setS(d=>{d[key]=val})},label);
+  const vis=visible();const arch=S.pages.filter(p=>p.archived);
+  const move=(i,dx)=>{const o=order();const j=i+dx;if(j<0||j>=vis.length)return;[o[i],o[j]]=[o[j],o[i]];setS(d=>{d.order=o})};
+  const ov=h('div',{class:'ov',onclick:e=>{if(e.target===ov)close()}},h('div',{class:'panel',role:'dialog','aria-label':'Оформление и копия'},
+    h('div',{class:'tools'},h('h2',{style:'flex:1'},'Оформление'),h('button',{class:'btn sm',onclick:close},'Закрыть')),
+    h('div',{},h('h3',{},'Название дневника'),inp(s.title,'Мой дневник','st-title',v=>{mutate(R.settings(),d=>{d.title=v},{typing:true})},'write')),
+    h('div',{},h('h3',{},'Тема'),h('div',{class:'opts'},opt(s.theme||'auto','auto','Как в системе','theme'),opt(s.theme,'light','Светлая','theme'),opt(s.theme,'dark','Тёмная','theme'))),
+    h('div',{},h('h3',{},'Цвет акцента'),h('div',{class:'opts'},Object.entries(ACC).map(([k,a])=>h('button',{class:'sw',type:'button',title:a[2],'aria-label':a[2],'aria-pressed':String((s.accent||'blue')===k),
+      style:'background:oklch(.55 '+a[1]+' '+a[0]+')',onclick:()=>setS(d=>{d.accent=k})})))),
+    h('div',{},h('h3',{},'Фон листа'),h('div',{class:'opts'},opt(s.paper||'dots','dots','Точки','paper'),opt(s.paper,'grid','Клетка','paper'),opt(s.paper,'lines','Линейка','paper'),opt(s.paper,'plain','Чистый','paper'))),
+    h('div',{},h('h3',{},'Шрифт записей'),h('div',{class:'opts'},opt(s.font||'serif','serif','С засечками','font'),opt(s.font,'sans','Без засечек','font'),opt(s.font,'hand','Рукописный','font'))),
+    h('div',{},h('h3',{},'Порядок страниц'),h('div',{class:'plist'},vis.map((p,i)=>h('div',{class:'pitem'},h('span',{style:'flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap'},p.title||'Без названия'),
+      h('button',{class:'icon neutral','aria-label':'Выше',onclick:()=>move(i,-1)},'↑'),h('button',{class:'icon neutral','aria-label':'Ниже',onclick:()=>move(i,1)},'↓'),
+      h('button',{class:'btn quiet sm',onclick:()=>archive(p.id,true)},'В архив'))))),
+    arch.length?h('div',{},h('h3',{},'Архив'),h('div',{class:'plist'},arch.map(p=>h('div',{class:'pitem'},h('span',{style:'flex:1'},p.title||'Без названия'),
+      h('button',{class:'btn sm',onclick:()=>archive(p.id,false)},'Вернуть'))))):null,
+    ghSection(),h('div',{},h('h3',{},'Резервная копия'),h('p',{class:'status',style:'margin:0 0 8px'},'Файл со всеми страницами и записями. Лежит у тебя, пока не удалишь.'),
+      h('div',{class:'opts'},h('button',{class:'btn',onclick:exportCopy},'Скачать копию (.json)'),importBtn()))));
+  return ov}
+async function exportCopyOld(){try{const dl=window.claude&&claude.use?await claude.use('downloads'):null;
+    if(!dl){toast('Скачивание недоступно в этом окне');return}
+    const data={app:'dnevnik',exported:new Date().toISOString(),settings:S.settings,pages:[]};
+    for(const p of S.pages){const o=clone(p);if(p.type==='notes'||p.type==='day'||p.type==='study'){const qs=await R.page(p.id).collection('entries').get();o.entries=qs.docs.map(d=>d.data())}data.pages.push(o)}
+    await dl.save({filename:'dnevnik-'+today()+'.json',data:JSON.stringify(data,null,2)})}
+  catch(e){if(e&&e.code==='declined')return;toast('Не удалось сохранить копию')}}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&(S.ui.settings||S.ui.newPage)){S.ui.settings=false;S.ui.newPage=false;render()}});
+
+
+/* ---------- GitHub storage (standalone build) ---------- */
+let CFG=null;
+const CFG_KEY='dnevnik-gh-cfg';
+const encPath=f=>f.split('/').map(encodeURIComponent).join('/');
+function bytesToB64(u8){let s='';for(let i=0;i<u8.length;i+=0x8000)s+=String.fromCharCode.apply(null,u8.subarray(i,i+0x8000));return btoa(s)}
+function b64ToBytes(b){const bin=atob(b.replace(/\s/g,''));const u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);return u}
+const strB64=s=>bytesToB64(new TextEncoder().encode(s));
+function ghDesc(e){if(!e)return'';if(e.status===401)return'токен не подходит или истёк (401)';if(e.status===403)return'нет прав или лимит запросов GitHub (403)';
+  if(e.status===404)return'репозиторий не найден или у токена нет к нему доступа (404)';if(e.status)return'ошибка GitHub '+e.status;return'нет связи с GitHub'}
+function makeGithubDb(cfg){
+  const API='https://api.github.com/repos/'+cfg.repo;
+  const H={Authorization:'Bearer '+cfg.token,Accept:'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28'};
+  const ck='dnevnik-gh-cache-'+cfg.repo;
+  let st={},sha={},branch=null,etag=null,synced=false,trusted=false,err=null,running=false,active=null,pt=null;
+  const jobs=[],ls=new Set();
+  try{const c=JSON.parse(localStorage.getItem(ck)||'null');if(c&&c.st){st=c.st;sha=c.sha||{};trusted=Object.keys(st).length>0}}catch(e){}
+  const persist=()=>{clearTimeout(pt);pt=setTimeout(()=>{try{localStorage.setItem(ck,JSON.stringify({st,sha}))}catch(e){}},500)};
+  const fileOf=p=>'data/'+p+'.json';
+  const par=p=>p.slice(0,p.lastIndexOf('/'));
+  const fc=()=>!(synced||trusted);
+  const snap=p=>({id:p.split('/').pop(),exists:p in st,data:()=>p in st?JSON.parse(JSON.stringify(st[p])):undefined,metadata:{fromCache:fc(),hasPendingWrites:false}});
+  const qs=c=>{const docs=Object.keys(st).filter(k=>par(k)===c).map(snap);return{docs,size:docs.length,empty:!docs.length,metadata:{fromCache:fc(),hasPendingWrites:false}}};
+  const fire=p=>ls.forEach(l=>{if(l.p===p||l.p===par(p))l.f()});
+  const fireAll=()=>ls.forEach(l=>l.f());
+  const api=async(method,path,body,extra)=>{
+    const r=await fetch(API+path,{method,headers:Object.assign({},H,body?{'Content-Type':'application/json'}:{},extra||{}),body:body?JSON.stringify(body):undefined});
+    if(!r.ok){const e=new Error('GitHub '+r.status);e.status=r.status;try{e.detail=(await r.json()).message}catch(_){}throw e}
+    return r.status===204?null:r.json()};
+  const notify=()=>{try{db.onStatus&&db.onStatus()}catch(e){}};
+  async function refreshSha(f){try{const j=await api('GET','/contents/'+encPath(f)+'?ref='+encodeURIComponent(branch));sha[f]=j.sha}catch(e){if(e.status===404)delete sha[f];else throw e}}
+  async function run(j){
+    if(!branch){const i=await api('GET','');branch=i.default_branch||'main'}
+    const f=j.kind==='file'?j.path:fileOf(j.path);
+    if(j.kind==='doc'&&j.data==null){if(!sha[f])return;
+      try{await api('DELETE','/contents/'+encPath(f),{message:'Удаление '+j.path,sha:sha[f],branch})}
+      catch(e){if(e.status===404){delete sha[f];return}if(e.status===409||e.status===422){await refreshSha(f);if(!sha[f])return;await api('DELETE','/contents/'+encPath(f),{message:'Удаление '+j.path,sha:sha[f],branch})}else throw e}
+      delete sha[f];persist();return}
+    const body={message:(j.kind==='file'?'Файл ':'Запись ')+j.path,content:j.kind==='file'?bytesToB64(j.bytes):strB64(JSON.stringify(j.data)),branch};
+    if(sha[f])body.sha=sha[f];
+    let r;
+    try{r=await api('PUT','/contents/'+encPath(f),body)}
+    catch(e){if(e.status===409||e.status===422){await refreshSha(f);if(sha[f])body.sha=sha[f];else delete body.sha;r=await api('PUT','/contents/'+encPath(f),body)}else throw e}
+    sha[f]=r.content.sha;persist()}
+  async function pump(){if(running)return;running=true;
+    while(jobs.length){const j=jobs[0];active=j;
+      try{await run(j);jobs.shift();err=null;active=null;j.resolve&&j.resolve()}
+      catch(e){active=null;if(j.kind==='file'){jobs.shift();j.reject&&j.reject(e);continue}
+        err=ghDesc(e);running=false;notify();setTimeout(pump,15000);return}
+      notify()}
+    running=false;notify()}
+  function addJob(j){if(j.kind==='doc'){const i=jobs.findIndex(x=>x.kind==='doc'&&x.path===j.path&&x!==active);if(i>=0)jobs.splice(i,1)}jobs.push(j);notify();pump()}
+  const pendingDoc=p=>jobs.some(j=>j.kind==='doc'&&j.path===p);
+  async function sync(){
+    try{
+      if(!branch){const i=await api('GET','');branch=i.default_branch||'main'}
+      const r=await fetch(API+'/git/trees/'+encodeURIComponent(branch)+'?recursive=1',{headers:Object.assign({},H,etag?{'If-None-Match':etag}:{})});
+      if(r.status===304){synced=true;err=jobs.length?err:null;notify();return}
+      let tree=[];
+      if(r.status===409||r.status===404){tree=[];etag=null}
+      else if(!r.ok){const e=new Error('GitHub '+r.status);e.status=r.status;throw e}
+      else{etag=r.headers.get('ETag');tree=(await r.json()).tree||[]}
+      const now={};for(const t of tree)if(t.type==='blob'&&t.path.startsWith('data/')&&t.path.endsWith('.json'))now[t.path]=t.sha;
+      const changed=new Set();
+      const todo=Object.keys(now).filter(f=>sha[f]!==now[f]&&!pendingDoc(f.slice(5,-5)));
+      let k=0;const worker=async()=>{while(k<todo.length){const f=todo[k++];
+        const j=await api('GET','/git/blobs/'+now[f]);const txt=new TextDecoder().decode(b64ToBytes(j.content));
+        const p=f.slice(5,-5);if(pendingDoc(p))continue;
+        try{st[p]=JSON.parse(txt);sha[f]=now[f];changed.add(p)}catch(e){}}};
+      await Promise.all([worker(),worker(),worker(),worker()]);
+      for(const f of Object.keys(sha)){if(f.startsWith('data/')&&!(f in now)&&!pendingDoc(f.slice(5,-5))){const p=f.slice(5,-5);if(p in st){delete st[p];changed.add(p)}delete sha[f]}}
+      const first=!synced;synced=true;err=jobs.length?err:null;persist();
+      if(first)fireAll();else changed.forEach(fire);
+      notify()
+    }catch(e){err=ghDesc(e);notify()}}
+  const doc=p=>({path:p,id:p.split('/').pop(),
+    get:async()=>snap(p),
+    set:async d=>{st[p]=JSON.parse(JSON.stringify(d));persist();fire(p);addJob({kind:'doc',path:p,data:JSON.parse(JSON.stringify(d))})},
+    delete:async()=>{delete st[p];persist();fire(p);addJob({kind:'doc',path:p,data:null})},
+    onSnapshot:(n,ef)=>{const l={p,f:()=>n(snap(p))};ls.add(l);setTimeout(l.f,0);return()=>ls.delete(l)},
+    collection:n=>col(p+'/'+n)});
+  const col=p=>({path:p,doc:id=>doc(p+'/'+id),get:async()=>qs(p),
+    onSnapshot:(n,ef)=>{const l={p,f:()=>n(qs(p))};ls.add(l);setTimeout(l.f,0);return()=>ls.delete(l)}});
+  const db={doc,collection:col,sync,
+    pending:()=>jobs.length,get err(){return err},
+    putFile:(path,bytes)=>new Promise((resolve,reject)=>addJob({kind:'file',path,bytes,resolve,reject})),
+    flushed:()=>new Promise(r=>{const t=setInterval(()=>{if(!jobs.length&&!running){clearInterval(t);r()}},200)}),
+    clearCache:()=>{try{localStorage.removeItem(ck)}catch(e){}}};
+  return db}
+
+/* ---------- standalone: boot, setup, files, import/export ---------- */
+function disconnect(){const go=()=>{try{if(S.db&&S.db.clearCache)S.db.clearCache();localStorage.removeItem(CFG_KEY)}catch(e){}location.reload()};
+  if(S.db&&S.db.pending&&S.db.pending()){toast('Дожидаюсь сохранения…');S.db.flushed().then(go)}else go()}
+function stuck(msg){if(S.ready)return;$('#app').replaceChildren(h('div',{class:'load'},h('div',{},h('b',{},'Дневник не смог связаться с GitHub'),
+  h('p',{class:'status'},msg||'Проверь интернет и доступ к репозиторию.'),
+  h('div',{class:'tools',style:'justify-content:center'},h('button',{class:'btn pri',onclick:()=>location.reload()},'Повторить'),
+    h('button',{class:'btn',onclick:disconnect},'Изменить доступ')))))}
+function setStatus(){const el=$('#status');if(!el)return;const gp=S.db&&S.db.pending?S.db.pending():0;const ge=S.db&&S.db.err;
+  el.className='status'+(ge?' err':'');
+  el.textContent=ge?'Не сохранено в GitHub: '+ge+'. Попробую снова':(gp||W.q.size||Object.keys(W.act).length)?'Сохраняю в GitHub…':'Всё сохранено в GitHub'}
+function setupScreen(msg){
+  const repo=h('input',{class:'in',id:'cfg-repo',placeholder:'логин/dnevnik-data',autocomplete:'off',autocapitalize:'off',value:(CFG&&CFG.repo)||''});
+  const tok=h('input',{class:'in',id:'cfg-token',type:'password',placeholder:'github_pat_…',autocomplete:'off'});
+  const st=h('p',{class:'status',role:'status'},msg||'');
+  const go=async()=>{const r=repo.value.trim().replace(/^https?:\/\/github\.com\//,'').replace(/\.git$/,'').replace(/\/$/,'');const t=tok.value.trim();
+    if(!/^[\w.-]+\/[\w.-]+$/.test(r)){st.textContent='Репозиторий записывается так: логин/dnevnik-data';return}
+    if(!t){st.textContent='Вставь токен доступа';return}
+    st.textContent='Проверяю доступ…';
+    try{const res=await fetch('https://api.github.com/repos/'+r,{headers:{Authorization:'Bearer '+t,Accept:'application/vnd.github+json'}});
+      if(!res.ok){st.textContent='Не получилось: '+ghDesc({status:res.status});return}
+      const info=await res.json();
+      if(info.permissions&&info.permissions.push===false){st.textContent='У токена нет права записи. Нужно разрешение Contents: Read and write';return}
+      if(!info.private){st.textContent='Репозиторий с данными должен быть приватным, а сейчас он открыт всем';return}
+      localStorage.setItem(CFG_KEY,JSON.stringify({repo:r,token:t}));location.reload()}
+    catch(e){st.textContent='Нет связи с GitHub. Проверь интернет'}};
+  $('#app').replaceChildren(h('div',{class:'setup'},h('h1',{class:'ptitle write'},'Мой дневник'),
+    h('p',{class:'lead'},'Подключи хранилище на GitHub. Это делается один раз на каждом устройстве.'),
+    h('div',{class:'field'},h('label',{for:'cfg-repo'},'Репозиторий с данными'),repo),
+    h('div',{class:'field'},h('label',{for:'cfg-token'},'Токен доступа'),tok),
+    h('div',{class:'tools'},h('button',{class:'btn pri',onclick:go},'Подключить')),st,
+    h('p',{class:'status'},'Токен хранится только в этом браузере и отправляется только на GitHub.')))}
+async function boot(){applyTheme();
+  try{CFG=JSON.parse(localStorage.getItem(CFG_KEY)||'null')}catch(e){}
+  if(!CFG||!CFG.repo||!CFG.token){setupScreen('');return}
+  S.db=makeGithubDb(CFG);S.uid='gh';S.local=false;S.db.onStatus=()=>setStatus();
+  setTimeout(()=>{if(S.ready)return;if(seenS&&seenP)maybeBoot(true);else stuck(S.db.err||'')},12000);
+  listen();S.db.sync();
+  setInterval(()=>{if(!document.hidden&&S.db)S.db.sync()},40000);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden&&S.db)S.db.sync()});
+  addEventListener('online',()=>{if(S.db)S.db.sync()})}
+
+/* files kept in the repo */
+const ghUrls={};
+async function fileUrl(m){if(ghUrls[m.p])return ghUrls[m.p];
+  const r=await fetch('https://api.github.com/repos/'+CFG.repo+'/contents/'+encPath(m.p),{headers:{Authorization:'Bearer '+CFG.token,Accept:'application/vnd.github.raw+json'}});
+  if(!r.ok)throw new Error('file '+r.status);const b=await r.blob();return ghUrls[m.p]=URL.createObjectURL(new Blob([b],{type:m.ct||b.type}))}
+function fileRow(m,onDel){
+  const img=(m.ct||'').startsWith('image/')?h('img',{class:'thumb',alt:m.t||'',hidden:true}):null;
+  if(img)fileUrl(m).then(u=>{img.src=u;img.hidden=false}).catch(()=>{});
+  const a=h('a',{class:'grow',href:'#',role:'button',onclick:async e=>{e.preventDefault();const w=window.open('','_blank');
+    try{const u=await fileUrl(m);if(w)w.location.href=u;else{const x=document.createElement('a');x.href=u;x.download=m.t||'file';x.click()}}
+    catch(er){if(w)w.close();toast('Не удалось открыть файл')}}},m.t||'файл');
+  return h('div',{class:'fedit'},img,a,h('button',{class:'icon','aria-label':'Убрать файл',onclick:()=>onDel(m.id)},'✕'))}
+async function attach(p,t,file){
+  if(file.size>20*1024*1024){toast('Файл больше 20 МБ. Уменьши его или сохрани ссылкой');return}
+  try{toast('Загружаю «'+file.name+'»…');const buf=new Uint8Array(await file.arrayBuffer());
+    const safe=file.name.replace(/[^\w.\-]+/g,'_').slice(-80)||'file';const path='files/'+uidn()+'-'+safe;
+    await S.db.putFile(path,buf);
+    mutate(R.entry(p.id,t.id),d=>{L(d,'mats').push({id:'f'+uidn(),kind:'file',t:file.name,p:path,ct:file.type||''});d.updated=Date.now()});
+    toast('Файл прикреплён');render()}
+  catch(e){toast('Не удалось загрузить файл'+(e&&e.status?' ('+e.status+')':''))}}
+
+/* backup and import */
+async function exportCopy(){try{
+  const data={app:'dnevnik',exported:new Date().toISOString(),settings:S.settings,pages:[]};
+  for(const p of S.pages){const o=clone(p);if(p.type==='notes'||p.type==='day'||p.type==='study'){const q=await R.page(p.id).collection('entries').get();o.entries=q.docs.map(d=>d.data())}data.pages.push(o)}
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));a.download='dnevnik-'+today()+'.json';
+  document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000)}
+  catch(e){toast('Не удалось сохранить копию')}}
+async function importCopy(d){
+  if(!d||!Array.isArray(d.pages)){toast('Это не файл копии дневника');return}
+  const db=S.db,bp=base();let n=0;
+  for(const p of S.pages.slice()){
+    if(p.type==='notes'||p.type==='day'||p.type==='study'){const q=await R.page(p.id).collection('entries').get();for(const e of q.docs)await db.doc(bp+'/pages/'+p.id+'/entries/'+e.id).delete()}
+    await db.doc(bp+'/pages/'+p.id).delete()}
+  for(const pg of d.pages){const o=clone(pg);const ents=o.entries||[];delete o.entries;if(!o.id)continue;
+    await db.doc(bp+'/pages/'+o.id).set(o);n++;
+    for(const e of ents){const id=e.id||e.date;if(id){const x=clone(e);delete x.id;await db.doc(bp+'/pages/'+o.id+'/entries/'+id).set(x)}}}
+  await db.doc(bp).set(Object.assign({v:1},d.settings||{},{order:d.pages.map(p=>p.id).filter(Boolean)}));
+  toast('Перенесено страниц: '+n+'. Обновляю…');await db.flushed();setTimeout(()=>location.reload(),600)}
+function importBtn(){const box=h('span',{});
+  const f=h('input',{type:'file',accept:'.json,application/json',hidden:true,id:'imp'});
+  const idle=()=>box.replaceChildren(f,h('button',{class:'btn',onclick:()=>f.click()},'Загрузить копию'));
+  f.addEventListener('change',async()=>{const file=f.files&&f.files[0];f.value='';if(!file)return;
+    let d;try{d=JSON.parse(await file.text())}catch(e){toast('Не удалось прочитать файл копии');return}
+    if(!d||!Array.isArray(d.pages)){toast('Это не файл копии дневника');return}
+    box.replaceChildren(h('p',{class:'status',style:'margin:0 0 6px'},'Всё, что сейчас в дневнике, будет заменено копией ('+d.pages.length+' стр.). Продолжить?'),
+      h('div',{class:'opts'},h('button',{class:'btn pri',onclick:async()=>{box.replaceChildren(h('span',{class:'status'},'Переношу…'));
+        try{await importCopy(d)}catch(e){toast('Не удалось перенести данные');idle()}}},'Да, заменить'),h('button',{class:'btn',onclick:idle},'Отмена')))});
+  idle();return box}
+function ghSection(){return h('div',{},h('h3',{},'Хранилище'),
+  h('p',{class:'status',style:'margin:0 0 8px'},'Данные лежат в приватном репозитории '+(CFG?CFG.repo:'')+' на GitHub, файлы в его папке files.'),
+  h('button',{class:'btn',onclick:disconnect},'Отключить это устройство'))}
+
+/* ---------- start ---------- */
+async function bootClaude(){applyTheme();setTimeout(()=>{if(S.ready)return;if(seenS&&seenP)maybeBoot(true);else stuck('')},12000);const slow=setTimeout(()=>{const s=$('#slow');if(s)s.hidden=false},10000);let db=null,uid=null;
+  try{if(window.claude&&claude.use){const d=await claude.use('db');if(d){db=d;uid='shared'}}}catch(e){}
+  clearTimeout(slow);
+  if(db){S.db=db;S.uid=uid}else{S.local=true;S.db=makeLocal();S.uid='local'}
+  listen()}
+function listen(){try{unsubs.push(R.settings().onSnapshot(onSettings,onErr));unsubs.push(R.settings().collection('pages').onSnapshot(onPages,onErr))}catch(e){onErr(e);stuck(String(e&&e.message||e))}}
+function goLocal(){unsubs.forEach(u=>{try{u()}catch(e){}});unsubs=[];S.local=true;S.db=makeLocal();S.uid='local';gotS=gotP=seenS=seenP=false;existsS=false;S.pages=[];S.settings=null;listen()}
+function stuckOld(msg){if(S.ready)return;$('#app').replaceChildren(h('div',{class:'load'},h('div',{},h('b',{},'Дневник не смог связаться с хранилищем'),
+  h('p',{class:'status'},'Проверь интернет и что ты вошла в тот же аккаунт Claude. '+(msg?('Ошибка: '+msg):'')),
+  h('div',{class:'tools',style:'justify-content:center'},h('button',{class:'btn pri',onclick:()=>location.reload()},'Повторить'),
+  h('button',{class:'btn',onclick:goLocal},'Открыть без синхронизации')),
+  h('p',{class:'status'},'Без синхронизации записи останутся только в этом браузере.'))))}
+addEventListener('error',e=>{if(!S.ready)stuck(e.message);else toast('Ошибка: '+e.message)});addEventListener('unhandledrejection',e=>{const r=e.reason;if(S.ready)toast('Ошибка: '+((r&&(r.code||r.message))||r))});
+boot();
+})();
+</script>
+
+</body>
+</html>
