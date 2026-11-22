@@ -201,7 +201,9 @@ a{color:var(--accent)}
 .tgrid td.today{background:var(--accent-soft);box-shadow:inset 2px 0 0 var(--accent),inset -2px 0 0 var(--accent)}
 .tgrid tr:last-child td.today{border-radius:0 0 8px 8px;box-shadow:inset 2px 0 0 var(--accent),inset -2px 0 0 var(--accent),inset 0 -2px 0 var(--accent)}
 .tgrid th small{display:block;font-size:.62rem;text-transform:uppercase;letter-spacing:.03em;opacity:.8}
-.tgrid th.wk,.tgrid td.wk{border-left:1px solid var(--line)}
+.tgrid th.wk,.tgrid td.wk{border-left:2px solid var(--muted);padding-left:6px}
+.cell:disabled,.ncell:disabled{opacity:.35;cursor:not-allowed;border-style:dashed}
+.cell:disabled:hover{border-color:var(--line)}
 .tgrid .hn .hd{display:block;color:var(--muted);font-size:.7rem;padding-left:2px}
 .cell.on{color:var(--bg);font-size:.72rem;font-weight:700}
 .ncell{width:40px;height:26px;border-radius:7px;border:1px solid var(--line);background:transparent;text-align:center;padding:0;font-size:.78rem}
@@ -242,6 +244,9 @@ a{color:var(--accent)}
 .badge{font-size:.72rem;border:1px solid var(--line);border-radius:99px;padding:2px 9px;color:var(--muted);white-space:nowrap}
 .badge.st-done{border-color:var(--accent);color:var(--accent)}
 .bk-meta{margin:10px 0}.hue{width:90px}
+.gbar{display:flex;align-items:center;gap:8px;margin:5px 0;font-size:.85rem}.gbar .gn{width:120px;flex:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gt{flex:1;height:10px;border-radius:99px;background:var(--line);overflow:hidden}.gt div{height:100%;background:var(--accent);border-radius:99px}
+.bk-gh{margin:18px 0 0;font:600 1.05rem var(--write)}.ledits{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
 .setup{max-width:460px;margin:8vh auto;display:grid;gap:14px}
 .setup .in{border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--surface)}
 </style>
@@ -573,12 +578,12 @@ function habitFields(o,set,pre){
     h('label',{},gl+' ',goal),mode==='count'?h('label',{},'Единица ',unit):null)}
 function habitCell(p,hb,mo,day,T){const date=mo+'-'+pad(day);const v=hv(p,hb,date);const g=hgoal(hb);const fut=date>T;
   if(hmode(hb)==='count'){const met=hper(hb)==='day'&&v>=g;
-    const i=h('input',{class:'ncell'+(v>0?' on':'')+(met?' met':''),type:'text',inputmode:'decimal',value:v?numTxt(v):'',placeholder:'·','aria-label':hb.name+', '+day+' число'});
+    const i=h('input',{class:'ncell'+(v>0?' on':'')+(met?' met':'')+(fut?' fut':''),type:'text',inputmode:'decimal',value:v?numTxt(v):'',placeholder:'·',disabled:fut,title:fut?'Будущие дни отмечать нельзя':null,'aria-label':hb.name+', '+day+' число'});
     i.addEventListener('change',()=>{const x=parseFloat(String(i.value).replace(',','.'));setHv(p,hb,date,isFinite(x)&&x>0?x:0);rr()});
     i.addEventListener('focus',()=>i.select());return i}
   const multi=hper(hb)==='day'&&g>1;
-  const b=h('button',{class:'cell'+(v>0?' on':'')+(fut?' fut':''),'aria-label':hb.name+', '+day+' число','aria-pressed':String(v>0)},multi&&v?String(v):'');
-  b.addEventListener('click',()=>{setHv(p,hb,date,multi?(v>=g?0:v+1):(v>0?0:1));rr()});return b}
+  const b=h('button',{class:'cell'+(v>0?' on':'')+(fut?' fut':''),'aria-label':hb.name+', '+day+' число','aria-pressed':String(v>0),disabled:fut,title:fut?'Будущие дни отмечать нельзя':null},multi&&v?String(v):'');
+  b.addEventListener('click',()=>{if(fut)return;setHv(p,hb,date,multi?(v>=g?0:v+1):(v>0?0:1));rr()});return b}
 function trackerView(p){const mo=S.view.month;const nd=daysIn(mo);const T=today();const cm=T.slice(0,7);const tdy=mo===cm?+T.slice(8):0;
   const out=head(p,'Привычка бывает на день или на неделю, с отметкой клеткой или числом. Сегодняшний день выделен цветом.');
   out.push(h('div',{class:'tools'},h('button',{class:'btn sm',onclick:()=>{S.view.month=shiftMonth(mo,-1);rr()},'aria-label':'Предыдущий месяц'},'←'),
@@ -616,8 +621,9 @@ function trackerView(p){const mo=S.view.month;const nd=daysIn(mo);const T=today(
     habitFields(eh,(k,v)=>{const f=d=>{const x=d.habits.find(y=>y.id===eh.id);if(x)x[k]=v};if(k==='per'||k==='mode'){act(p,f);rr()}else edit(p,f)},'he-'),
     h('div',{class:'tools',style:'margin-top:8px'},h('button',{class:'btn quiet sm',onclick:()=>{S.view.hEdit=null;rr()}},'Готово'),
       h('button',{class:'btn quiet sm danger',onclick:()=>{act(p,d=>{d.habits=d.habits.filter(x=>x.id!==eh.id)});S.view.hEdit=null;toast('Привычка удалена',true);rr()}},'Удалить привычку'))));
-  out.push(h('div',{class:'sec'},h('div',{class:'sec-h'},h('b',{class:'write'},'График выполнения')),
-    h('div',{class:'hcharts'},p.habits.map(hb=>habitChart(p,hb,mo,T)))));
+  const cnt=p.habits.filter(hb=>hmode(hb)==='count');
+  if(cnt.length)out.push(h('div',{class:'sec'},h('div',{class:'sec-h'},h('b',{class:'write'},'График выполнения')),
+    h('div',{class:'hcharts'},cnt.map(hb=>habitChart(p,hb,mo,T)))));
   out.push(form);return out}
 
 /* ---------- habit charts (inline SVG) ---------- */
@@ -733,7 +739,12 @@ function rteEl(n,ref){
 
 /* ---------- book tracker ---------- */
 const BST={want:'Хочу прочитать',now:'Читаю',done:'Прочитано',drop:'Бросила'};
-const BTAGS=['Понравилось','Заставило думать','Смешно','Грустно','Вдохновило','Затянуто','Перечитала бы','Советую'];
+const DEFG=['Роман','Классика','Фантастика','Фэнтези','Детектив','Нон-фикшн','Саморазвитие'].map(n=>({id:n,name:n}));
+const DEFC=['Понравилось','Заставило думать','Смешно','Грустно','Вдохновило','Затянуто','Перечитала бы','Советую'].map(n=>({id:n,name:n}));
+const gens=p=>p.genres||DEFG,cats=p=>p.cats||DEFC;
+const ensureLists=d=>{if(!d.genres)d.genres=clone(DEFG);if(!d.cats)d.cats=clone(DEFC)};
+const bGen=(p,b)=>{const ok=new Set(gens(p).map(g=>g.id));return(b.genres||[]).filter(x=>ok.has(x))};
+const BTAGS_OLD=['Понравилось','Заставило думать','Смешно','Грустно','Вдохновило','Затянуто','Перечитала бы','Советую'];
 const BMON=['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];
 const hueOf=s=>{let x=0;for(const c of String(s))x=(x*31+c.charCodeAt(0))%360;return x};
 const bkOf=(d,id)=>(d.books||[]).find(x=>x.id===id);
@@ -760,14 +771,16 @@ function bookCard(p,b){const open=!!S.view.bk[b.id];const T=today();
   const hue=h('input',{type:'range',min:0,max:359,value:b.hue||0,'aria-label':'Цвет корешка',class:'hue'});hue.addEventListener('change',()=>{upd(x=>{x.hue=+hue.value});render()});
   out.append(
     h('div',{class:'meta bk-meta'},h('label',{},'Статус ',sel),h('label',{},'Страниц ',num),
-      h('label',{},'Жанр ',inp(b.genre,'роман, нон-фикшн','bg-'+b.id,v=>typ(x=>{x.genre=v}),'date-in')),
       h('label',{},'Начала ',dt('start','Дата начала')),h('label',{},'Закончила ',dt('fin','Дата окончания')),h('label',{},'Цвет корешка ',hue)),
     h('div',{class:'field'},h('div',{class:'lab'},'Название и автор'),
       h('div',{class:'tools'},inp(b.title,'Название книги','bt-'+b.id,v=>typ(x=>{x.title=v}),'grow'),inp(b.author,'Автор','ba-'+b.id,v=>typ(x=>{x.author=v}),'grow'))),
     h('div',{class:'field'},h('div',{class:'lab'},'Оценка'),stars(b.rating||0,v=>{upd(x=>{x.rating=v});render()})),
-    h('div',{class:'field'},h('div',{class:'lab'},'Какая книга'),
-      h('div',{class:'chips',style:'margin-top:0'},BTAGS.map(t=>{const on=(b.tags||[]).includes(t);
-        return h('button',{type:'button',class:'chip','aria-pressed':String(on),onclick:()=>{upd(x=>{const a=L(x,'tags');const k=a.indexOf(t);k>=0?a.splice(k,1):a.push(t)});render()}},t)}))),
+    h('div',{class:'field'},h('div',{class:'lab'},'Жанры'),
+      h('div',{class:'chips',style:'margin-top:0'},gens(p).map(g=>{const on=(b.genres||[]).includes(g.id);
+        return h('button',{type:'button',class:'chip','aria-pressed':String(on),onclick:()=>{upd(x=>{const a=L(x,'genres');const k=a.indexOf(g.id);k>=0?a.splice(k,1):a.push(g.id)});render()}},g.name)}))),
+    h('div',{class:'field'},h('div',{class:'lab'},'Категории'),
+      h('div',{class:'chips',style:'margin-top:0'},cats(p).map(g=>{const on=(b.tags||[]).includes(g.id);
+        return h('button',{type:'button',class:'chip','aria-pressed':String(on),onclick:()=>{upd(x=>{const a=L(x,'tags');const k=a.indexOf(g.id);k>=0?a.splice(k,1):a.push(g.id)});render()}},g.name)}))),
     h('div',{class:'field'},h('div',{class:'lab'},'Впечатления'),ta(b.review,'Что почувствовала, что запомнилось, что думаешь о героях и идее…','br-'+b.id,v=>typ(x=>{x.review=v}),'write')),
     h('div',{class:'field'},h('div',{class:'lab'},'Цитаты'),
       (b.quotes||[]).map(q=>h('div',{class:'fedit'},ta(q.t,'Цитата','bq-'+q.id,v=>typ(x=>{const y=(x.quotes||[]).find(z=>z.id===q.id);if(y)y.t=v}),'write grow'),
@@ -777,6 +790,15 @@ function bookCard(p,b){const open=!!S.view.bk[b.id];const T=today();
     h('div',{class:'tools',style:'margin-top:14px'},h('button',{class:'btn quiet sm',onclick:()=>{S.view.bk[b.id]=false;render()}},'Свернуть'),
       h('button',{class:'btn quiet sm danger',onclick:()=>{act(p,d=>{d.books=(d.books||[]).filter(x=>x.id!==b.id)});toast('Книга удалена',true);render()}},'Удалить книгу')));
   return out}
+function listEditor(p,key,title){const items=key==='genres'?gens(p):cats(p);const bf=key==='genres'?'genres':'tags';
+  const ed=fn=>act(p,d=>{ensureLists(d);fn(d)});
+  const nin=h('input',{class:'in',id:'le-new-'+key,placeholder:'Новое название','aria-label':'Новое название'});
+  const add=()=>{const n=nin.value.trim();if(!n){nin.focus();return}const id='x'+uidn();ed(d=>{d[key].push({id,name:n})});S.focus='le-new-'+key;render()};
+  nin.addEventListener('keydown',e=>{if(e.key==='Enter')add()});
+  return h('div',{class:'field'},h('div',{class:'lab'},title),
+    items.map(it=>h('div',{class:'fedit'},inp(it.name,'Название','le-'+key+'-'+it.id,v=>edit(p,d=>{ensureLists(d);const x=d[key].find(y=>y.id===it.id);if(x)x.name=v})),
+      h('button',{class:'icon','aria-label':'Удалить: '+it.name,onclick:()=>{ed(d=>{d[key]=d[key].filter(y=>y.id!==it.id);(d.books||[]).forEach(b=>{if(b[bf])b[bf]=b[bf].filter(z=>z!==it.id)})});toast('Удалено: '+it.name,true);render()}},'✕'))),
+    h('div',{class:'tools'},nin,h('button',{class:'btn sm',onclick:add},'Добавить')))}
 function booksView(p){const books=p.books||[];const Y=S.view.byear;const T=today();const CY=+T.slice(0,4),CM=+T.slice(5,7)-1;
   const out=head(p,'Книги, которые читаешь, хочешь прочитать и уже прочитала: оценки, впечатления, цитаты, цель на год.');
   const done=books.filter(b=>b.status==='done'&&(b.fin||'').slice(0,4)===String(Y));
@@ -801,6 +823,10 @@ function booksView(p){const books=p.books||[];const Y=S.view.byear;const T=today
   if(done.length)out.push(h('div',{class:'shelf','aria-label':'Книжная полка за '+Y},done.slice().sort((a,b)=>a.fin.localeCompare(b.fin)).map(b=>
     h('button',{class:'spine',type:'button',title:(b.title||'Без названия')+(b.author?', '+b.author:''),style:'background:hsl('+(b.hue||0)+' 45% 48%);height:'+(78+Math.min(+b.pages||250,700)/9)+'px',
       onclick:()=>{S.view.bk[b.id]=true;S.view.bfilter='all';render();setTimeout(()=>{const e=document.getElementById('bt-'+b.id);if(e)e.scrollIntoView({block:'center'})},30)}},h('span',{},b.title||'?')))));
+  if(done.length){const GL0=gens(p);const rows=[...GL0.map(g=>[g.name,done.filter(b=>bGen(p,b).includes(g.id)).length]),['Без жанра',done.filter(b=>!bGen(p,b).length).length]].filter(x=>x[1]>0).sort((a,b)=>b[1]-a[1]);
+    const mx=Math.max(1,...rows.map(r=>r[1]));
+    out.push(h('div',{class:'hchart',style:'margin-top:14px'},h('div',{class:'hc-h'},h('b',{},'Жанры за '+Y),h('small',{},'книга с несколькими жанрами учитывается в каждом')),
+      rows.map(([n,c])=>h('div',{class:'gbar'},h('span',{class:'gn'},n),h('div',{class:'gt'},h('div',{style:'width:'+(c/mx*100)+'%'})),h('b',{},String(c))))))}
   const nt=h('input',{class:'in',id:'bnew-t',placeholder:'Название книги','aria-label':'Название книги'});
   const na=h('input',{class:'in',id:'bnew-a',placeholder:'Автор','aria-label':'Автор'});
   const ns=h('select',{class:'date-in','aria-label':'Статус'},Object.entries(BST).map(([k,l])=>h('option',{value:k,selected:k==='want'},l)));
@@ -809,10 +835,20 @@ function booksView(p){const books=p.books||[];const Y=S.view.byear;const T=today
   out.push(h('div',{class:'field',style:'max-width:640px'},h('div',{class:'lab'},'Добавить книгу'),h('div',{class:'tools'},nt,na),h('div',{class:'tools',style:'margin-top:8px'},ns,h('button',{class:'btn pri',onclick:add},'Добавить'))));
   const f=S.view.bfilter||'all';const cnt=k=>k==='all'?books.length:books.filter(b=>b.status===k).length;
   out.push(h('div',{class:'chips'},[['all','Все'],...Object.entries(BST)].map(([k,l])=>h('button',{class:'chip','aria-pressed':String(f===k),onclick:()=>{S.view.bfilter=k;render()}},l+' · '+cnt(k)))));
-  const list=books.filter(b=>f==='all'||b.status===f);
+  const GL=gens(p);let fg=S.view.bgenre||'all';if(fg!=='all'&&fg!=='none'&&!GL.some(g=>g.id===fg))fg='all';
+  const inG=(b,k)=>k==='all'||(k==='none'?!bGen(p,b).length:bGen(p,b).includes(k));
+  out.push(h('div',{class:'chips'},h('span',{class:'status',style:'align-self:center'},'Жанр:'),
+    [['all','Все жанры',books.length],...GL.map(g=>[g.id,g.name,books.filter(b=>inG(b,g.id)).length]),['none','Без жанра',books.filter(b=>inG(b,'none')).length]]
+      .map(([k,l,n])=>h('button',{class:'chip','aria-pressed':String(fg===k),onclick:()=>{S.view.bgenre=k;render()}},l+' · '+n)),
+    h('button',{class:'chip','aria-pressed':String(!!S.view.bgroup),onclick:()=>{S.view.bgroup=!S.view.bgroup;render()}},'Группировать по жанрам')));
+  const list=books.filter(b=>(f==='all'||b.status===f)&&inG(b,fg));
   if(!books.length)out.push(emptyBox('Здесь будут твои книги','Добавь первую книгу выше: прочитанную, текущую или из списка «хочу прочитать».',[],null));
-  else if(!list.length)out.push(h('p',{class:'status'},'На этой полке пока пусто'));
-  out.push(h('div',{class:'bk-list'},list.map(b=>bookCard(p,b))));
+  else if(!list.length)out.push(h('p',{class:'status'},'Ничего не найдено'));
+  if(S.view.bgroup){const parts=[...GL.map(g=>[g.name,list.filter(b=>bGen(p,b).includes(g.id))]),['Без жанра',list.filter(b=>!bGen(p,b).length)]].filter(x=>x[1].length);
+    parts.forEach(([n,l])=>{out.push(h('h3',{class:'bk-gh'},n+' · '+l.length));out.push(h('div',{class:'bk-list'},l.map(b=>bookCard(p,b))))})}
+  else out.push(h('div',{class:'bk-list'},list.map(b=>bookCard(p,b))));
+  out.push(h('div',{class:'tools',style:'margin-top:18px'},h('button',{class:'btn quiet sm',onclick:()=>{S.view.bedit=!S.view.bedit;render()}},S.view.bedit?'Готово':'Настроить жанры и категории')));
+  if(S.view.bedit)out.push(h('div',{class:'ledits'},listEditor(p,'genres','Жанры'),listEditor(p,'cats','Категории')));
   return out}
 
 /* ---------- helpers for new features ---------- */
