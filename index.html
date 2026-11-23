@@ -114,8 +114,9 @@ html[data-paper=lines] .sheet{background-image:repeating-linear-gradient(transpa
 .tgrid{border-collapse:separate;border-spacing:0;min-width:100%}
 .tgrid th,.tgrid td{padding:3px;text-align:center;font-weight:400;font-size:.78rem;color:var(--muted)}
 .tgrid th.today{color:var(--accent);font-weight:600}
-.tgrid .hn{position:sticky;left:0;background:var(--surface);text-align:left;min-width:150px;max-width:210px;padding:3px 8px;z-index:2;border-right:1px solid var(--line)}
+.tgrid .hn{position:sticky;left:0;background:var(--surface);text-align:left;min-width:170px;max-width:230px;padding:3px 8px;z-index:2;border-right:1px solid var(--line)}
 .tgrid .hn .in{font-size:.92rem;color:var(--fg)}
+.tgrid .hn textarea.hnin{resize:none;overflow:hidden;line-height:1.25;padding:2px 4px;min-height:0;white-space:normal;word-break:break-word}
 .tgrid .st{min-width:64px;padding:0 10px;color:var(--fg);white-space:nowrap}
 .cell{width:26px;height:26px;border-radius:7px;border:1px solid var(--line);background:transparent;cursor:pointer;padding:0}
 .cell:hover{border-color:var(--accent)}
@@ -250,6 +251,15 @@ a{color:var(--accent)}
 .cpick{display:inline-flex;align-items:center;gap:4px;flex-wrap:wrap}.cprev{width:22px;height:22px;border-radius:6px;border:1px solid var(--line)}
 .rgbin{width:58px}.sws{display:inline-flex;gap:4px;flex-wrap:wrap;margin-left:6px}
 .csw{width:22px;height:22px;border-radius:6px;border:1px solid var(--line);cursor:pointer;padding:0}.csw.on{outline:2px solid var(--accent);outline-offset:1px}
+.cover-s{width:42px;height:62px;object-fit:cover;border-radius:4px;flex:none;box-shadow:0 1px 3px rgba(0,0,0,.25)}
+.cover-l{max-width:140px;max-height:210px;border-radius:6px;box-shadow:0 1px 4px rgba(0,0,0,.3)}
+.bkt-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:14px;margin-top:12px}
+.bkt{background:none;border:0;padding:0;text-align:left;cursor:pointer;display:flex;flex-direction:column;gap:2px;min-width:0}
+.bkt-c{position:relative;aspect-ratio:2/3;border-radius:6px;overflow:hidden;display:flex;align-items:flex-end;box-shadow:0 1px 4px rgba(0,0,0,.25)}
+.bkt-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.bkt-n{position:relative;color:#fff;font:600 .85rem var(--write);padding:8px;text-shadow:0 1px 2px rgba(0,0,0,.5)}
+.bkt-img:not([hidden])~.bkt-n{display:none}
+.bkt b{font-size:.85rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.bkt small{color:var(--muted);font-size:.74rem}
 .setup{max-width:460px;margin:8vh auto;display:grid;gap:14px}
 .setup .in{border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--surface)}
 </style>
@@ -542,6 +552,7 @@ function notesView(p){const m=S.entries[p.id]||{};const all=Object.values(m).fil
 /* ---------- habits: daily or weekly, checks or numbers, charts ---------- */
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const hper=b=>b.per==='week'?'week':'day';
+const hchart=b=>b.chart!=null?!!b.chart:b.mode==='count';
 const hmode=b=>b.mode==='count'?'count':'check';
 const hgoal=b=>(+b.goal>0?+b.goal:1);
 const raz=n=>{n=Math.abs(Math.round(n));return n%10>=2&&n%10<=4&&(n%100<10||n%100>=20)?'раза':'раз'};
@@ -574,41 +585,46 @@ function habitFields(o,set,pre){
   goal.addEventListener('input',()=>set('goal',parseFloat(String(goal.value).replace(',','.'))||1));
   const unit=h('input',{class:'date-in',id:pre+'u',placeholder:'мл, слов, стр.',style:'width:110px','aria-label':'Единица',value:o.unit||''});
   unit.addEventListener('input',()=>set('unit',unit.value.trim()));
+  const chk=h('label',{},h('input',{type:'checkbox',id:pre+'c',checked:hchart(o)}),' Показывать график');
+  chk.firstChild.addEventListener('change',e=>set('chart',e.target.checked));
   const gl=mode==='count'?(per==='day'?'Цель в день':'Цель в неделю'):(per==='day'?'Раз в день':'Раз в неделю');
   return h('div',{class:'meta hform'},
     h('label',{},'Период ',sel('per',per,[['day','Ежедневно'],['week','Еженедельно']])),
     h('label',{},'Отметка ',sel('mode',mode,[['check','Клики по клеткам'],['count','Ввод числа']])),
-    h('label',{},gl+' ',goal),mode==='count'?h('label',{},'Единица ',unit):null)}
+    h('label',{},gl+' ',goal),mode==='count'?h('label',{},'Единица ',unit):null,chk)}
+function hname(p,hb){const e=ta(hb.name,'Привычка','hn-'+hb.id,v=>edit(p,d=>{const x=d.habits.find(y=>y.id===hb.id);if(x)x.name=v}),'hnin');
+  e.addEventListener('keydown',k=>{if(k.key==='Enter'){k.preventDefault();e.blur()}});return e}
 function habitCell(p,hb,mo,day,T){const date=mo+'-'+pad(day);const v=hv(p,hb,date);const g=hgoal(hb);const fut=date>T;
   if(hmode(hb)==='count'){const met=hper(hb)==='day'&&v>=g;
     const i=h('input',{class:'ncell'+(v>0?' on':'')+(met?' met':'')+(fut?' fut':''),type:'text',inputmode:'decimal',value:v?numTxt(v):'',placeholder:'·',disabled:fut,title:fut?'Будущие дни отмечать нельзя':null,'aria-label':hb.name+', '+day+' число'});
     i.addEventListener('change',()=>{const x=parseFloat(String(i.value).replace(',','.'));setHv(p,hb,date,isFinite(x)&&x>0?x:0);rr()});
     i.addEventListener('focus',()=>i.select());return i}
   const multi=hper(hb)==='day'&&g>1;
-  const b=h('button',{class:'cell'+(v>0?' on':'')+(fut?' fut':''),'aria-label':hb.name+', '+day+' число','aria-pressed':String(v>0),disabled:fut,title:fut?'Будущие дни отмечать нельзя':null},multi&&v?String(v):'');
-  b.addEventListener('click',()=>{if(fut)return;setHv(p,hb,date,multi?(v>=g?0:v+1):(v>0?0:1));rr()});return b}
+  const capped=!fut&&hper(hb)==='week'&&v===0&&weekSum(p,hb,mondayOf(date))>=Math.ceil(g);
+  const b=h('button',{class:'cell'+(v>0?' on':'')+(fut?' fut':''),'aria-label':hb.name+', '+day+' число','aria-pressed':String(v>0),disabled:fut||capped,title:fut?'Будущие дни отмечать нельзя':(capped?'На этой неделе цель уже выполнена':null)},multi&&v?String(v):'');
+  b.addEventListener('click',()=>{if(fut||capped)return;setHv(p,hb,date,multi?(v>=g?0:v+1):(v>0?0:1));rr()});return b}
 function trackerView(p){const mo=S.view.month;const nd=daysIn(mo);const T=today();const cm=T.slice(0,7);const tdy=mo===cm?+T.slice(8):0;
   const out=head(p,'Привычка бывает на день или на неделю, с отметкой клеткой или числом. Сегодняшний день выделен цветом.');
   out.push(h('div',{class:'tools'},h('button',{class:'btn sm',onclick:()=>{S.view.month=shiftMonth(mo,-1);rr()},'aria-label':'Предыдущий месяц'},'←'),
     h('b',{style:'text-transform:capitalize;min-width:11ch;text-align:center'},monthName(mo)),
     h('button',{class:'btn sm',onclick:()=>{S.view.month=shiftMonth(mo,1);rr()},'aria-label':'Следующий месяц'},'→'),
-    mo!==cm?h('button',{class:'btn quiet sm',onclick:()=>{S.view.month=cm;S.view.tsl=null;rr()}},'К текущему'):null));
+    h('button',{class:'btn sm',onclick:()=>{S.view.month=cm;S.view.tsl=null;render()}},'Сегодня')));
   const PRE=[['Вода',{mode:'count',goal:2000,unit:'мл'}],['Новые слова',{mode:'count',goal:20,unit:'слов'}],['Сон до 23:00',{}],['Прогулка',{}],['Чтение',{goal:1}],['Спорт',{per:'week',goal:3}]];
   const nh=S.view.nh;
   const nin=h('input',{class:'in',id:'hnew',placeholder:'Название новой привычки','aria-label':'Название новой привычки',value:nh.name||''});
   nin.addEventListener('input',()=>{nh.name=nin.value});
-  const addNew=()=>{const n=(nin.value||'').trim();if(!n){nin.focus();return}addHabit(p,n,{per:nh.per,mode:nh.mode,goal:nh.goal||1,unit:nh.unit||''});S.view.nh={per:'day',mode:'check',goal:1,unit:''}};
+  const addNew=()=>{const n=(nin.value||'').trim();if(!n){nin.focus();return}addHabit(p,n,{per:nh.per,mode:nh.mode,goal:nh.goal||1,unit:nh.unit||'',chart:hchart(nh)});S.view.nh={per:'day',mode:'check',goal:1,unit:''}};
   nin.addEventListener('keydown',e=>{if(e.key==='Enter')addNew()});
   const form=h('div',{class:'field',style:'max-width:640px'},h('div',{class:'lab'},'Новая привычка'),nin,
-    habitFields(nh,(k,v)=>{nh[k]=v;if(k==='per'||k==='mode')render()},'nh-'),
+    habitFields(nh,(k,v)=>{nh[k]=v;if(k==='per'||k==='mode')delete nh.chart;if(k==='per'||k==='mode')render()},'nh-'),
     h('div',{class:'tools',style:'margin-top:8px'},h('button',{class:'btn pri',onclick:addNew},'Добавить привычку')));
   if(!p.habits.length){out.push(emptyBox('Добавь первую привычку','Выбери готовую или настрой свою ниже: период, цель и способ отметки.',PRE.map(x=>x[0]),n=>addHabit(p,n,PRE.find(x=>x[0]===n)[1])));out.push(form);return out}
   const dayHead=Array.from({length:nd},(_,i)=>{const d=i+1;const dt=parseD(mo+'-'+pad(d));
     return h('th',{class:d===tdy?'today':''},h('div',{},d),h('small',{},dt.toLocaleDateString('ru-RU',{weekday:'short'})))});
   const rows=p.habits.map(hb=>{
     return h('tr',{},h('td',{class:'hn'},h('div',{style:'display:flex;align-items:center;gap:2px'},
-        inp(hb.name,'Привычка','hn-'+hb.id,v=>edit(p,d=>{const x=d.habits.find(y=>y.id===hb.id);if(x)x.name=v})),
-        h('button',{class:'icon neutral',title:'Настроить привычку','aria-label':'Настроить привычку',onclick:()=>{S.view.hEdit=S.view.hEdit===hb.id?null:hb.id;rr()}},'⚙')),
+        hname(p,hb),
+        h('button',{class:'icon neutral',title:'Настроить привычку','aria-label':'Настроить привычку',onclick:()=>{S.view.hEdit=S.view.hEdit===hb.id?null:hb.id;rr();setTimeout(()=>{const e=document.getElementById('hedit');if(e)e.scrollIntoView({block:'nearest',behavior:'smooth'})},40)}},'⚙')),
         h('small',{class:'hd'},hdesc(hb))),
       Array.from({length:nd},(_,i)=>{const d=i+1;const dt=parseD(mo+'-'+pad(d));
         return h('td',{class:d===tdy?'today':''},habitCell(p,hb,mo,d,T))}))});
@@ -616,11 +632,14 @@ function trackerView(p){const mo=S.view.month;const nd=daysIn(mo);const T=today(
   out.push(sc);
   requestAnimationFrame(()=>{sc.scrollLeft=S.view.tsl!=null?S.view.tsl:(tdy?Math.max(0,(tdy-4)*46):0)});
   const eh=S.view.hEdit&&p.habits.find(x=>x.id===S.view.hEdit);
-  if(eh)out.push(h('div',{class:'field'},h('div',{class:'lab'},'Настройки: '+(eh.name||'привычка')),
-    habitFields(eh,(k,v)=>{const f=d=>{const x=d.habits.find(y=>y.id===eh.id);if(x)x[k]=v};if(k==='per'||k==='mode'){act(p,f);rr()}else edit(p,f)},'he-'),
-    h('div',{class:'tools',style:'margin-top:8px'},h('button',{class:'btn quiet sm',onclick:()=>{S.view.hEdit=null;rr()}},'Готово'),
+  if(eh)out.push(h('div',{class:'field',id:'hedit'},h('div',{class:'lab'},'Настройки: '+(eh.name||'привычка')),
+    habitFields(eh,(k,v)=>{const f=d=>{const x=d.habits.find(y=>y.id===eh.id);if(x)x[k]=v};if(k==='per'||k==='mode'||k==='chart'){act(p,f);rr()}else edit(p,f)},'he-'),
+    h('div',{class:'tools',style:'margin-top:8px'},
+      [['↑ Выше',-1],['↓ Ниже',1]].map(([l,dx])=>{const i=p.habits.findIndex(x=>x.id===eh.id);return h('button',{class:'btn quiet sm',disabled:i+dx<0||i+dx>=p.habits.length,
+        onclick:()=>{act(p,d=>{const a=d.habits;const k=a.findIndex(x=>x.id===eh.id);const j=k+dx;if(j<0||j>=a.length)return;[a[k],a[j]]=[a[j],a[k]]});rr()}},l)}),
+      h('button',{class:'btn quiet sm',onclick:()=>{S.view.hEdit=null;rr()}},'Готово'),
       h('button',{class:'btn quiet sm danger',onclick:()=>{act(p,d=>{d.habits=d.habits.filter(x=>x.id!==eh.id)});S.view.hEdit=null;toast('Привычка удалена',true);rr()}},'Удалить привычку'))));
-  const cnt=p.habits.filter(hb=>hmode(hb)==='count');
+  const cnt=p.habits.filter(hchart);
   if(cnt.length)out.push(h('div',{class:'sec'},h('div',{class:'sec-h'},h('b',{class:'write'},'График выполнения')),
     h('div',{class:'hcharts'},cnt.map(hb=>habitChart(p,hb,mo,T)))));
   out.push(form);return out}
@@ -649,11 +668,11 @@ function habitChart(p,hb,mo,T){const s=hStats(p,hb,mo,T);const g=hgoal(hb);const
     svg=donutSvg(s.td?s.met/s.td:0,s.pct+'%',s.met+' из '+s.td+' дн.');
     const st=streak(p,hb,T);note=st?'Серия: '+st+' '+(st%10===1&&st%100!==11?'день':(st%10>=2&&st%10<=4&&(st%100<10||st%100>=20)?'дня':'дней')):'Серии пока нет'}
   else if(s.kind==='day'){
-    svg=barsSvg(s.days,g,{label:'Значения по дням, '+hb.name,shown:i=>i+1<=s.td,mark:i=>i+1===tdy,val:false,
+    svg=barsSvg(s.days,g,{label:'Значения по дням, '+hb.name,shown:i=>i+1<=s.td,mark:()=>false,val:false,
       label_:i=>((i+1)===1||(i+1)%5===0)?String(i+1):''});
     note=s.td?(hmode(hb)==='count'?'В среднем '+numTxt(s.sum/s.td)+u+' в день, цель выполнена '+s.met+' из '+s.td+' дн.':'Цель выполнена '+s.met+' из '+s.td+' дн.'):'Этот месяц ещё не начался'}
   else{
-    svg=barsSvg(s.weeks.map(w=>w.tot),g,{label:'Значения по неделям, '+hb.name,shown:i=>s.weeks[i].started,mark:i=>s.weeks[i].cur,val:true,
+    svg=barsSvg(s.weeks.map(w=>w.tot),g,{label:'Значения по неделям, '+hb.name,shown:i=>s.weeks[i].started,mark:()=>false,val:true,
       label_:i=>fmtShort(s.weeks[i].ws)});
     const cw=s.weeks.find(w=>w.cur);note='Недель с целью: '+s.done+' из '+s.elapsed+(cw?'. Эта неделя: '+numTxt(cw.tot)+' из '+numTxt(g)+u:'')}
   card.innerHTML='<div class="hc-h"><b>'+esc(hb.name||'Без названия')+'</b><small>'+esc(hdesc(hb))+'</small></div><div class="hc-svg">'+svg+'</div><p class="status" style="margin:6px 0 0">'+esc(note)+'</p>';
@@ -755,11 +774,32 @@ function addBook(p,title,author,status){const id='b'+uidn();
   S.view.bk[id]=true;S.focus='bt-'+id;render()}
 function stars(v,fn,label){return h('span',{class:'stars',role:'group','aria-label':label||'Оценка'},[1,2,3,4,5].map(i=>
   h('button',{type:'button',class:'star'+(v>=i?' on':''),'aria-label':i+' из 5','aria-pressed':String(v>=i),onclick:()=>fn(v===i?0:i)},'★')))}
+function coverImg(b,cls){const c=b.cover;if(!c||!c.p||typeof fileUrl!=='function')return null;
+  const img=h('img',{class:cls,alt:'Обложка: '+(b.title||'книга'),hidden:true});fileUrl({p:c.p,ct:c.ct||'image/jpeg'}).then(u=>{img.src=u;img.hidden=false}).catch(()=>{});return img}
+async function setCover(p,b,file){
+  try{if(!S.db||!S.db.putFile||!file)throw 0;toast('Загружаю обложку…');
+    const bm=await createImageBitmap(file);const k=Math.min(1,480/Math.max(bm.width,bm.height));const w=Math.round(bm.width*k),hh=Math.round(bm.height*k);
+    const cv=document.createElement('canvas');cv.width=w;cv.height=hh;cv.getContext('2d').drawImage(bm,0,0,w,hh);
+    const blob=await new Promise(r=>cv.toBlob(r,'image/jpeg',.85));const buf=new Uint8Array(await blob.arrayBuffer());
+    const path='files/cover-'+uidn()+'.jpg';await S.db.putFile(path,buf);
+    act(p,d=>{const x=bkOf(d,b.id);if(x)x.cover={p:path,ct:'image/jpeg'}});toast('Обложка добавлена');render()}
+  catch(e){toast('Не удалось добавить обложку. Подойдёт обычная картинка JPG или PNG')}}
+function coverCtl(p,b){const f=h('input',{type:'file',accept:'image/*',hidden:true,id:'bc-'+b.id});
+  f.addEventListener('change',()=>{const file=f.files&&f.files[0];f.value='';if(file)setCover(p,b,file)});
+  const img=coverImg(b,'cover-l');
+  return h('div',{class:'tools',style:'align-items:flex-start'},img,f,
+    h('button',{class:'btn sm',type:'button',onclick:()=>f.click()},b.cover?'Заменить обложку':'Добавить обложку'),
+    b.cover?h('button',{class:'btn quiet sm',type:'button',onclick:()=>{act(p,d=>{const x=bkOf(d,b.id);if(x)delete x.cover});render()}},'Убрать'):null)}
+function bookTile(p,b){const img=coverImg(b,'bkt-img');
+  return h('button',{class:'bkt',type:'button',title:(b.title||'Без названия')+(b.author?', '+b.author:''),
+    onclick:()=>{S.view.bk[b.id]=true;S.view.bview='list';render();setTimeout(()=>{const e=document.getElementById('bt-'+b.id);if(e)e.scrollIntoView({block:'center'})},30)}},
+    h('span',{class:'bkt-c',style:'background:'+bColor(b)},img,h('span',{class:'bkt-n'},b.title||'Без названия')),
+    h('b',{},b.title||'Без названия'),h('small',{},[b.author,BST[b.status]].filter(Boolean).join(' · ')))}
 function bookCard(p,b){const open=!!S.view.bk[b.id];const T=today();
   const upd=fn=>act(p,d=>{const x=bkOf(d,b.id);if(x)fn(x)});
   const typ=fn=>edit(p,d=>{const x=bkOf(d,b.id);if(x)fn(x)});
   const sw=h('span',{class:'spinelet',style:'background:'+bColor(b)});
-  const headRow=h('div',{class:'bk-h'},sw,
+  const headRow=h('div',{class:'bk-h'},coverImg(b,'cover-s')||sw,
     h('button',{class:'bk-t',type:'button','aria-expanded':String(open),onclick:()=>{S.view.bk[b.id]=!open;render()}},
       h('b',{},b.title||'Без названия'),h('span',{},[b.author,b.pages?b.pages+' стр.':''].filter(Boolean).join(' · ')||'автор не указан')),
     b.rating?h('span',{class:'stars ro','aria-label':'Оценка '+b.rating+' из 5'},'★'.repeat(b.rating)):null,
@@ -782,6 +822,7 @@ function bookCard(p,b){const open=!!S.view.bk[b.id];const T=today();
       h('label',{},'Начала ',dt('start','Дата начала')),h('label',{},'Закончила ',dt('fin','Дата окончания')),h('label',{},'Цвет корешка (RGB) ',hue)),
     h('div',{class:'field'},h('div',{class:'lab'},'Название и автор'),
       h('div',{class:'tools'},inp(b.title,'Название книги','bt-'+b.id,v=>typ(x=>{x.title=v}),'grow'),inp(b.author,'Автор','ba-'+b.id,v=>typ(x=>{x.author=v}),'grow'))),
+    h('div',{class:'field'},h('div',{class:'lab'},'Обложка'),coverCtl(p,b)),
     h('div',{class:'field'},h('div',{class:'lab'},'Оценка'),stars(b.rating||0,v=>{upd(x=>{x.rating=v});render()})),
     h('div',{class:'field'},h('div',{class:'lab'},'Жанры'),
       h('div',{class:'chips',style:'margin-top:0'},gens(p).map(g=>{const on=(b.genres||[]).includes(g.id);
@@ -826,7 +867,7 @@ function booksView(p){const books=p.books||[];const Y=S.view.byear;const T=today
       .map(([v,l])=>h('div',{class:'tile'},h('b',{},String(v)),h('span',{},l)))));
   const per=Array(12).fill(0);done.forEach(b=>{per[+b.fin.slice(5,7)-1]++});
   const ch=h('div',{class:'hchart'});
-  ch.innerHTML='<div class="hc-h"><b>Книг по месяцам</b><small>'+Y+'</small></div><div class="hc-svg">'+barsSvg(per,target/12,{label:'Прочитанные книги по месяцам',shown:()=>true,mark:i=>Y===CY&&i===CM,val:true,label_:i=>BMON[i]})+'</div>';
+  ch.innerHTML='<div class="hc-h"><b>Книг по месяцам</b><small>'+Y+'</small></div><div class="hc-svg">'+barsSvg(per,target/12,{label:'Прочитанные книги по месяцам',shown:()=>true,mark:()=>false,val:true,label_:i=>BMON[i]})+'</div>';
   if(done.length)out.push(ch);
   if(done.length)out.push(h('div',{class:'shelf','aria-label':'Книжная полка за '+Y},done.slice().sort((a,b)=>a.fin.localeCompare(b.fin)).map(b=>
     h('button',{class:'spine',type:'button',title:(b.title||'Без названия')+(b.author?', '+b.author:''),style:'background:'+bColor(b)+';height:'+(78+Math.min(+b.pages||250,700)/9)+'px',
@@ -852,7 +893,13 @@ function booksView(p){const books=p.books||[];const Y=S.view.byear;const T=today
   const list=books.filter(b=>(f==='all'||b.status===f)&&inG(b,fg));
   if(!books.length)out.push(emptyBox('Здесь будут твои книги','Добавь первую книгу выше: прочитанную, текущую или из списка «хочу прочитать».',[],null));
   else if(!list.length)out.push(h('p',{class:'status'},'Ничего не найдено'));
-  if(S.view.bgroup){const parts=[...GL.map(g=>[g.name,list.filter(b=>bGen(p,b).includes(g.id))]),['Без жанра',list.filter(b=>!bGen(p,b).length)]].filter(x=>x[1].length);
+  const bv=S.view.bview||'list';
+  out.push(h('div',{class:'chips'},h('span',{class:'status',style:'align-self:center'},'Вид:'),
+    [['list','Список'],['tiles','Обложки']].map(([k,l])=>h('button',{class:'chip','aria-pressed':String(bv===k),onclick:()=>{S.view.bview=k;render()}},l))));
+  if(bv==='tiles'){const tl=(l)=>h('div',{class:'bkt-grid'},l.map(b=>bookTile(p,b)));
+    if(S.view.bgroup){[...GL.map(g=>[g.name,list.filter(b=>bGen(p,b).includes(g.id))]),['Без жанра',list.filter(b=>!bGen(p,b).length)]].filter(x=>x[1].length).forEach(([n,l])=>{out.push(h('h3',{class:'bk-gh'},n+' · '+l.length));out.push(tl(l))})}
+    else out.push(tl(list))}
+  else if(S.view.bgroup){const parts=[...GL.map(g=>[g.name,list.filter(b=>bGen(p,b).includes(g.id))]),['Без жанра',list.filter(b=>!bGen(p,b).length)]].filter(x=>x[1].length);
     parts.forEach(([n,l])=>{out.push(h('h3',{class:'bk-gh'},n+' · '+l.length));out.push(h('div',{class:'bk-list'},l.map(b=>bookCard(p,b))))})}
   else out.push(h('div',{class:'bk-list'},list.map(b=>bookCard(p,b))));
   out.push(h('div',{class:'tools',style:'margin-top:18px'},h('button',{class:'btn quiet sm',onclick:()=>{S.view.bedit=!S.view.bedit;render()}},S.view.bedit?'Готово':'Настроить жанры и категории')));
