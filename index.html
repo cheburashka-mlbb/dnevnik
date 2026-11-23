@@ -260,6 +260,8 @@ a{color:var(--accent)}
 .bkt-n{position:relative;color:#fff;font:600 .85rem var(--write);padding:8px;text-shadow:0 1px 2px rgba(0,0,0,.5)}
 .bkt-img:not([hidden])~.bkt-n{display:none}
 .bkt b{font-size:.85rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.bkt small{color:var(--muted);font-size:.74rem}
+.ck-done input.in{text-decoration:line-through;color:var(--muted)}.ckb{width:20px;height:20px;flex:none;accent-color:var(--accent)}
+.tq{border-left:2px solid var(--line);padding-left:10px;margin:8px 0}
 .setup{max-width:460px;margin:8vh auto;display:grid;gap:14px}
 .setup .in{border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--surface)}
 </style>
@@ -299,12 +301,14 @@ function inp(value,ph,id,onInput,cls,type){const e=h('input',{class:'in '+(cls||
 let PREF={};try{PREF=JSON.parse(localStorage.getItem('dnevnik-pref')||'{}')}catch(e){}
 const S={settings:null,pages:[],entries:{},loaded:{},cur:null,db:null,uid:null,local:false,ready:false,dirty:false,
   hist:{undo:[],redo:[]},ui:{settings:false,newPage:false},focus:null,entSub:null,
-  view:{sec:{},stab:{},topic:{},pick:null,moodEdit:false,sfilter:'',newHue:90,phEdit:false,week:null,month:today().slice(0,7),date:today(),hideDone:false,open:{},note:{},noteOpen:false,nh:{per:'day',mode:'check',goal:1,unit:''},hEdit:null,tsl:null,bk:{},bfilter:'all',byear:new Date().getFullYear(),fieldsEdit:false,q:''}};
+  view:{sec:{},stab:{},topic:{},pick:null,moodEdit:false,sfilter:'',newHue:90,phEdit:false,week:null,month:today().slice(0,7),date:today(),hideDone:false,open:{},note:{},noteOpen:false,tp:{},tfilter:'all',htab:'chores',nh:{per:'day',mode:'check',goal:1,unit:''},hEdit:null,tsl:null,bk:{},bfilter:'all',byear:new Date().getFullYear(),fieldsEdit:false,q:''}};
 const TYPES={goals:{name:'Цели',def:'Цели на жизнь',desc:'Сферы жизни и цели в каждой, с отметкой прогресса.'},
   plans:{name:'Планы',def:'Планы',desc:'Списки дел по срокам: неделя, месяц, год, «когда-нибудь».'},
   notes:{name:'Заметки',def:'Заметки',desc:'Свободные записи с названием и поиском.'},
   tracker:{name:'Трекер',def:'Привычки',desc:'Таблица привычек по дням месяца.'},
   study:{name:'Обучение',def:'План обучения',desc:'Цель курса, база тем с карточками и недельный трекер.'},
+  deep:{name:'Увлечения',def:'Целеустремлённость',desc:'Темы, в которые хочется углубиться до уровня мини-эксперта: ступени, вопросы, источники.'},
+  home:{name:'Дом',def:'Дом',desc:'Регулярные домашние дела без графиков, список дел, покупки и наблюдения.'},
   books:{name:'Книги',def:'Книжный трекер',desc:'Прочитанное и планы: цель на год, полки, оценки, впечатления и цитаты.'},
   day:{name:'День',def:'Мой день',desc:'Запись на каждую дату с полями, которые настраиваешь сама.'}};
 const ACC={blue:[255,.11,'Синий'],sage:[160,.075,'Шалфей'],plum:[330,.12,'Слива'],clay:[40,.115,'Глина'],graphite:[255,.02,'Графит']};
@@ -316,7 +320,7 @@ const page=()=>S.pages.find(p=>p.id===S.cur)||null;
 function visible(){const o=(S.settings&&S.settings.order)||[];const by=new Map(S.pages.map(p=>[p.id,p]));
   const a=o.map(i=>by.get(i)).filter(Boolean);for(const p of S.pages)if(!o.includes(p.id))a.push(p);return a.filter(p=>!p.archived)}
 function newPageData(type,title){const p={id:'p'+uidn(),type,title:title||TYPES[type].def,created:Date.now(),archived:false};
-  if(type==='goals')p.areas=[];if(type==='plans')p.groups=[];if(type==='tracker'){p.habits=[];p.marks={};p.vals={}}if(type==='books'){p.books=[];p.target=12}
+  if(type==='goals')p.areas=[];if(type==='plans')p.groups=[];if(type==='tracker'){p.habits=[];p.marks={};p.vals={}}if(type==='books'){p.books=[];p.target=12}if(type==='deep')p.topics=[];if(type==='home'){p.habits=[];p.marks={};p.vals={};p.todos=[];p.shop=[];p.obs=''}
   if(type==='study'){p.goal={result:'',deadline:'',hours:5,res:[]};p.weeks={}}
   if(type==='day')p.fields=[{id:'f1',label:'Настроение',kind:'scale'},{id:'f2',label:'Главное на сегодня',kind:'tasks'},
     {id:'f3',label:'Благодарность',kind:'long'},{id:'f4',label:'Как прошёл день',kind:'moments'}];if(type==='day')p.moods=clone(DEF_MOODS);
@@ -457,7 +461,7 @@ function tipBar(){const out=[];
 function noPage(){return h('div',{class:'empty'},h('b',{},'Страниц пока нет'),'Создай первую: цели, планы, трекер, заметки или записи по дням.',
   h('div',{class:'chips'},h('button',{class:'btn pri',onclick:()=>{S.ui.newPage=true;render()}},'+ Новая страница')))}
 function viewFor(p){switch(p.type){case'goals':return goalsView(p);case'plans':return plansView(p);case'notes':return notesView(p);
-  case'tracker':return trackerView(p);case'day':return dayView(p);case'study':return studyView(p);case'books':return booksView(p)}return h('div',{},'Неизвестный тип страницы')}
+  case'tracker':return trackerView(p);case'day':return dayView(p);case'study':return studyView(p);case'books':return booksView(p);case'deep':return deepView(p);case'home':return homeView(p)}return h('div',{},'Неизвестный тип страницы')}
 function head(p,lead){return[inp(p.title,'Название страницы','ptitle',v=>{
     mutate(R.page(p.id),d=>{d.title=v},{typing:true});const b=document.querySelector('.nav button[data-id="'+p.id+'"] span');if(b)b.textContent=v||'Без названия'},'ptitle write'),
   h('p',{class:'lead'},lead)]}
@@ -578,7 +582,7 @@ function streak(p,hb,T){const g=hgoal(hb);let d=T,n=0;if(hv(p,hb,d)<g)d=addDays(
   for(let i=0;i<400;i++){if(hv(p,hb,d)>=g){n++;d=addDays(d,-1)}else break}return n}
 function addHabit(p,name,o){const id='h'+uidn();act(p,d=>{d.habits.push(Object.assign({id,name,per:'day',mode:'check',goal:1,unit:''},o||{}))});S.focus=name?null:'hn-'+id;rr()}
 function rr(){const sc=document.querySelector('.tscroll');if(sc)S.view.tsl=sc.scrollLeft;render()}
-function habitFields(o,set,pre){
+function habitFields(o,set,pre,noChart){
   const per=o.per==='week'?'week':'day',mode=o.mode==='count'?'count':'check';
   const sel=(k,val,opts)=>{const s=h('select',{class:'date-in',id:pre+k},opts.map(([v,l])=>h('option',{value:v,selected:v===val},l)));s.addEventListener('change',()=>set(k,s.value));return s};
   const goal=h('input',{type:'number',class:'date-in',id:pre+'g',min:0,step:'any',style:'width:90px',value:o.goal||1,'aria-label':'Цель'});
@@ -591,7 +595,7 @@ function habitFields(o,set,pre){
   return h('div',{class:'meta hform'},
     h('label',{},'Период ',sel('per',per,[['day','Ежедневно'],['week','Еженедельно']])),
     h('label',{},'Отметка ',sel('mode',mode,[['check','Клики по клеткам'],['count','Ввод числа']])),
-    h('label',{},gl+' ',goal),mode==='count'?h('label',{},'Единица ',unit):null,chk)}
+    h('label',{},gl+' ',goal),mode==='count'?h('label',{},'Единица ',unit):null,noChart?null:chk)}
 function hname(p,hb){const e=ta(hb.name,'Привычка','hn-'+hb.id,v=>edit(p,d=>{const x=d.habits.find(y=>y.id===hb.id);if(x)x.name=v}),'hnin');
   e.addEventListener('keydown',k=>{if(k.key==='Enter'){k.preventDefault();e.blur()}});return e}
 function habitCell(p,hb,mo,day,T){const date=mo+'-'+pad(day);const v=hv(p,hb,date);const g=hgoal(hb);const fut=date>T;
@@ -604,19 +608,19 @@ function habitCell(p,hb,mo,day,T){const date=mo+'-'+pad(day);const v=hv(p,hb,dat
   const b=h('button',{class:'cell'+(v>0?' on':'')+(fut?' fut':''),'aria-label':hb.name+', '+day+' число','aria-pressed':String(v>0),disabled:fut||capped,title:fut?'Будущие дни отмечать нельзя':(capped?'На этой неделе цель уже выполнена':null)},multi&&v?String(v):'');
   b.addEventListener('click',()=>{if(fut||capped)return;setHv(p,hb,date,multi?(v>=g?0:v+1):(v>0?0:1));rr()});return b}
 function trackerView(p){const mo=S.view.month;const nd=daysIn(mo);const T=today();const cm=T.slice(0,7);const tdy=mo===cm?+T.slice(8):0;
-  const out=head(p,'Привычка бывает на день или на неделю, с отметкой клеткой или числом. Сегодняшний день выделен цветом.');
+  const out=head(p,p.type==='home'?'Регулярные домашние дела: отмечай, что сделано. Сегодняшний день выделен цветом.':'Привычка бывает на день или на неделю, с отметкой клеткой или числом. Сегодняшний день выделен цветом.');
   out.push(h('div',{class:'tools'},h('button',{class:'btn sm',onclick:()=>{S.view.month=shiftMonth(mo,-1);rr()},'aria-label':'Предыдущий месяц'},'←'),
     h('b',{style:'text-transform:capitalize;min-width:11ch;text-align:center'},monthName(mo)),
     h('button',{class:'btn sm',onclick:()=>{S.view.month=shiftMonth(mo,1);rr()},'aria-label':'Следующий месяц'},'→'),
     h('button',{class:'btn sm',onclick:()=>{S.view.month=cm;S.view.tsl=null;render()}},'Сегодня')));
-  const PRE=[['Вода',{mode:'count',goal:2000,unit:'мл'}],['Новые слова',{mode:'count',goal:20,unit:'слов'}],['Сон до 23:00',{}],['Прогулка',{}],['Чтение',{goal:1}],['Спорт',{per:'week',goal:3}]];
+  const PRE=p.type==='home'?[['Пылесосить',{per:'week',goal:2}],['Помыть полы',{per:'week',goal:1}],['Убрать на кухне',{}],['Стирка',{per:'week',goal:2}],['Полить цветы',{per:'week',goal:2}],['Постричь газон',{per:'week',goal:1}]]:[['Вода',{mode:'count',goal:2000,unit:'мл'}],['Новые слова',{mode:'count',goal:20,unit:'слов'}],['Сон до 23:00',{}],['Прогулка',{}],['Чтение',{goal:1}],['Спорт',{per:'week',goal:3}]];
   const nh=S.view.nh;
   const nin=h('input',{class:'in',id:'hnew',placeholder:'Название новой привычки','aria-label':'Название новой привычки',value:nh.name||''});
   nin.addEventListener('input',()=>{nh.name=nin.value});
   const addNew=()=>{const n=(nin.value||'').trim();if(!n){nin.focus();return}addHabit(p,n,{per:nh.per,mode:nh.mode,goal:nh.goal||1,unit:nh.unit||'',chart:hchart(nh)});S.view.nh={per:'day',mode:'check',goal:1,unit:''}};
   nin.addEventListener('keydown',e=>{if(e.key==='Enter')addNew()});
   const form=h('div',{class:'field',style:'max-width:640px'},h('div',{class:'lab'},'Новая привычка'),nin,
-    habitFields(nh,(k,v)=>{nh[k]=v;if(k==='per'||k==='mode')delete nh.chart;if(k==='per'||k==='mode')render()},'nh-'),
+    habitFields(nh,(k,v)=>{nh[k]=v;if(k==='per'||k==='mode')delete nh.chart;if(k==='per'||k==='mode')render()},'nh-',p.type==='home'),
     h('div',{class:'tools',style:'margin-top:8px'},h('button',{class:'btn pri',onclick:addNew},'Добавить привычку')));
   if(!p.habits.length){out.push(emptyBox('Добавь первую привычку','Выбери готовую или настрой свою ниже: период, цель и способ отметки.',PRE.map(x=>x[0]),n=>addHabit(p,n,PRE.find(x=>x[0]===n)[1])));out.push(form);return out}
   const dayHead=Array.from({length:nd},(_,i)=>{const d=i+1;const dt=parseD(mo+'-'+pad(d));
@@ -633,14 +637,14 @@ function trackerView(p){const mo=S.view.month;const nd=daysIn(mo);const T=today(
   requestAnimationFrame(()=>{sc.scrollLeft=S.view.tsl!=null?S.view.tsl:(tdy?Math.max(0,(tdy-4)*46):0)});
   const eh=S.view.hEdit&&p.habits.find(x=>x.id===S.view.hEdit);
   if(eh)out.push(h('div',{class:'field',id:'hedit'},h('div',{class:'lab'},'Настройки: '+(eh.name||'привычка')),
-    habitFields(eh,(k,v)=>{const f=d=>{const x=d.habits.find(y=>y.id===eh.id);if(x)x[k]=v};if(k==='per'||k==='mode'||k==='chart'){act(p,f);rr()}else edit(p,f)},'he-'),
+    habitFields(eh,(k,v)=>{const f=d=>{const x=d.habits.find(y=>y.id===eh.id);if(x)x[k]=v};if(k==='per'||k==='mode'||k==='chart'){act(p,f);rr()}else edit(p,f)},'he-',p.type==='home'),
     h('div',{class:'tools',style:'margin-top:8px'},
       [['↑ Выше',-1],['↓ Ниже',1]].map(([l,dx])=>{const i=p.habits.findIndex(x=>x.id===eh.id);return h('button',{class:'btn quiet sm',disabled:i+dx<0||i+dx>=p.habits.length,
         onclick:()=>{act(p,d=>{const a=d.habits;const k=a.findIndex(x=>x.id===eh.id);const j=k+dx;if(j<0||j>=a.length)return;[a[k],a[j]]=[a[j],a[k]]});rr()}},l)}),
       h('button',{class:'btn quiet sm',onclick:()=>{S.view.hEdit=null;rr()}},'Готово'),
       h('button',{class:'btn quiet sm danger',onclick:()=>{act(p,d=>{d.habits=d.habits.filter(x=>x.id!==eh.id)});S.view.hEdit=null;toast('Привычка удалена',true);rr()}},'Удалить привычку'))));
   const cnt=p.habits.filter(hchart);
-  if(cnt.length)out.push(h('div',{class:'sec'},h('div',{class:'sec-h'},h('b',{class:'write'},'График выполнения')),
+  if(p.type!=='home'&&cnt.length)out.push(h('div',{class:'sec'},h('div',{class:'sec-h'},h('b',{class:'write'},'График выполнения')),
     h('div',{class:'hcharts'},cnt.map(hb=>habitChart(p,hb,mo,T)))));
   out.push(form);return out}
 
@@ -904,6 +908,91 @@ function booksView(p){const books=p.books||[];const Y=S.view.byear;const T=today
   else out.push(h('div',{class:'bk-list'},list.map(b=>bookCard(p,b))));
   out.push(h('div',{class:'tools',style:'margin-top:18px'},h('button',{class:'btn quiet sm',onclick:()=>{S.view.bedit=!S.view.bedit;render()}},S.view.bedit?'Готово':'Настроить жанры и категории')));
   if(S.view.bedit)out.push(h('div',{class:'ledits'},listEditor(p,'genres','Жанры'),listEditor(p,'cats','Категории')));
+  return out}
+
+/* ---------- deep dives ("целеустремлённость") ---------- */
+const DST={spark:'Заинтересовало',dig:'Копаю',exp:'Мини-эксперт',pause:'На паузе'};
+const DSTEPS=['Понять основы','Выучить термины и понятия','Найти главные источники','Попробовать на практике','Объяснить другому своими словами'];
+const tpOf=(d,id)=>(d.topics||[]).find(x=>x.id===id);
+const tprog=t=>{const a=t.steps||[],q=t.qs||[];const n=a.length+q.length;return n?Math.round((a.filter(x=>x.done).length+q.filter(x=>x.done).length)/n*100):0};
+const chkb=(val,fn,label)=>{const c=h('input',{type:'checkbox',checked:!!val,'aria-label':label,class:'ckb'});c.addEventListener('change',()=>fn(c.checked));return c};
+const delb=(fn,label)=>h('button',{type:'button',class:'icon','aria-label':label,onclick:fn},'✕');
+function addTopic(p,name){const id='t'+uidn();
+  act(p,d=>{L(d,'topics').unshift({id,name,status:'spark',why:'',known:'',steps:DSTEPS.map((t,i)=>({id:'s'+i+uidn(),t,done:false})),qs:[],src:[],log:[],created:today(),updated:Date.now()})});
+  S.view.tp[id]=true;S.focus='tn-'+id;render()}
+function dtCard(p,t){const open=!!S.view.tp[t.id];
+  const upd=fn=>act(p,d=>{const x=tpOf(d,t.id);if(x){fn(x);x.updated=Date.now()}});
+  const typ=fn=>edit(p,d=>{const x=tpOf(d,t.id);if(x){fn(x);x.updated=Date.now()}});
+  const pr=tprog(t);const nextQ=(t.qs||[]).find(q=>!q.done&&q.t);
+  const out=h('div',{class:'bk'+(open?' open':'')},h('div',{class:'bk-h'},
+    h('button',{class:'bk-t',type:'button','aria-expanded':String(open),onclick:()=>{S.view.tp[t.id]=!open;render()}},
+      h('b',{},t.name||'Без названия'),h('span',{},nextQ?'Дальше: '+nextQ.t:(t.why||'').slice(0,90))),
+    h('span',{class:'bk-badges'},h('span',{class:'badge st-'+(t.status==='exp'?'done':t.status)},DST[t.status]||''),h('span',{class:'badge'},pr+'%'))));
+  out.append(h('div',{class:'bk-bar',style:'margin:8px 0 0',role:'progressbar','aria-valuemin':0,'aria-valuemax':100,'aria-valuenow':pr,'aria-label':'Прогресс'},h('div',{style:'width:'+pr+'%'})));
+  if(!open)return out;
+  const sel=h('select',{class:'date-in','aria-label':'Статус'},Object.entries(DST).map(([k,l])=>h('option',{value:k,selected:k===t.status},l)));
+  sel.addEventListener('change',()=>{upd(x=>{x.status=sel.value});render()});
+  const addRow=(key,mk,lab,focusPre)=>h('button',{class:'btn quiet sm',type:'button',onclick:()=>{const id='i'+uidn();upd(x=>{const o=mk(id);key==='log'?L(x,key).unshift(o):L(x,key).push(o)});S.focus=focusPre+id;render()}},lab);
+  const item=(key,id,fn)=>upd(x=>{const y=(x[key]||[]).find(z=>z.id===id);if(y)fn(y)});
+  const itemT=(key,id,fn)=>typ(x=>{const y=(x[key]||[]).find(z=>z.id===id);if(y)fn(y)});
+  const rm=(key,id)=>{upd(x=>{x[key]=(x[key]||[]).filter(z=>z.id!==id)});render()};
+  out.append(
+    h('div',{class:'meta bk-meta'},h('label',{},'Статус ',sel)),
+    h('div',{class:'field'},h('div',{class:'lab'},'Название'),inp(t.name,'Тема','tn-'+t.id,v=>typ(x=>{x.name=v}))),
+    h('div',{class:'field'},h('div',{class:'lab'},'Почему зацепило и что хочу понять'),ta(t.why,'Главный вопрос или цель: что значит «разобраться» в этой теме','tw-'+t.id,v=>typ(x=>{x.why=v}),'write')),
+    h('div',{class:'field'},h('div',{class:'lab'},'Ступени к мини-эксперту'),
+      (t.steps||[]).map(s=>h('div',{class:'fedit'+(s.done?' ck-done':'')},chkb(s.done,v=>{item('steps',s.id,y=>{y.done=v});render()},'Готово: '+s.t),
+        inp(s.t,'Ступень','ts-'+s.id,v=>itemT('steps',s.id,y=>{y.t=v}),'grow'),delb(()=>rm('steps',s.id),'Удалить ступень'))),
+      addRow('steps',id=>({id,t:'',done:false}),'+ Ступень','ts-')),
+    h('div',{class:'field'},h('div',{class:'lab'},'Вопросы и ответы'),
+      (t.qs||[]).map(q=>h('div',{class:'tq'+(q.done?' ck-done':'')},h('div',{class:'fedit'},chkb(q.done,v=>{item('qs',q.id,y=>{y.done=v});render()},'Выяснено'),
+          inp(q.t,'Вопрос','tq-'+q.id,v=>itemT('qs',q.id,y=>{y.t=v}),'grow'),delb(()=>rm('qs',q.id),'Удалить вопрос')),
+        ta(q.a,'Ответ, когда найду','ta-'+q.id,v=>itemT('qs',q.id,y=>{y.a=v}),'write'))),
+      addRow('qs',id=>({id,t:'',a:'',done:false}),'+ Вопрос','tq-')),
+    h('div',{class:'field'},h('div',{class:'lab'},'Источники'),
+      (t.src||[]).map(s=>h('div',{class:'tq'+(s.done?' ck-done':'')},h('div',{class:'fedit'},chkb(s.done,v=>{item('src',s.id,y=>{y.done=v});render()},'Изучено'),
+          inp(s.t,'Книга, статья, видео, человек','tt-'+s.id,v=>itemT('src',s.id,y=>{y.t=v}),'grow'),delb(()=>rm('src',s.id),'Удалить источник')),
+        h('div',{class:'fedit'},inp(s.u,'Ссылка (если есть)','tu-'+s.id,v=>itemT('src',s.id,y=>{y.u=v}),'grow'),
+          okUrl(s.u)?h('a',{href:s.u.trim(),target:'_blank',rel:'noopener noreferrer',class:'btn quiet sm'},'Открыть'):null))),
+      addRow('src',id=>({id,t:'',u:'',done:false}),'+ Источник','tt-')),
+    h('div',{class:'field'},h('div',{class:'lab'},'Что я уже знаю (своими словами)'),ta(t.known,'Мини-конспект: главное, что уже понятно','tk-'+t.id,v=>typ(x=>{x.known=v}),'write')),
+    h('div',{class:'field'},h('div',{class:'lab'},'Находки и заметки по дням'),
+      addRow('log',id=>({id,d:today(),t:''}),'+ Находка','tl-'),
+      (t.log||[]).map(l=>h('div',{class:'tq'},h('div',{class:'fedit'},h('input',{type:'date',class:'date-in',value:l.d||'','aria-label':'Дата',onchange:e=>{item('log',l.id,y=>{y.d=e.target.value})}}),h('span',{class:'grow'}),delb(()=>rm('log',l.id),'Удалить запись')),
+        ta(l.t,'Что нашла, что удивило','tl-'+l.id,v=>itemT('log',l.id,y=>{y.t=v}),'write')))),
+    h('div',{class:'tools',style:'margin-top:14px'},h('button',{class:'btn quiet sm',onclick:()=>{S.view.tp[t.id]=false;render()}},'Свернуть'),
+      h('button',{class:'btn quiet sm danger',onclick:()=>{act(p,d=>{d.topics=(d.topics||[]).filter(x=>x.id!==t.id)});toast('Тема удалена',true);render()}},'Удалить тему')));
+  return out}
+function deepView(p){const out=head(p,'Темы, в которые хочется вникнуть до уровня мини-эксперта: ступени, вопросы, источники и находки в одном месте.');
+  const topics=p.topics||[];const nin=h('input',{class:'in',id:'tnew',placeholder:'Новая тема, которая зацепила','aria-label':'Новая тема'});
+  const add=()=>{const n=nin.value.trim();if(!n){nin.focus();return}addTopic(p,n)};nin.addEventListener('keydown',e=>{if(e.key==='Enter')add()});
+  out.push(h('div',{class:'field',style:'max-width:640px'},h('div',{class:'tools'},nin,h('button',{class:'btn pri',onclick:add},'Добавить тему'))));
+  const f=S.view.tfilter||'all';const cnt=k=>k==='all'?topics.length:topics.filter(t=>t.status===k).length;
+  if(topics.length)out.push(h('div',{class:'chips'},[['all','Все'],...Object.entries(DST)].map(([k,l])=>h('button',{class:'chip','aria-pressed':String(f===k),onclick:()=>{S.view.tfilter=k;render()}},l+' · '+cnt(k)))));
+  const list=topics.filter(t=>f==='all'||t.status===f);
+  if(!topics.length)out.push(emptyBox('Здесь будут твои темы','Впиши тему, которая тебя увлекла. К ней сразу добавятся ступени к «мини-эксперту», их можно менять.',[],null));
+  out.push(h('div',{class:'bk-list'},list.map(t=>dtCard(p,t))));return out}
+
+/* ---------- home ---------- */
+function checkList(p,key,ph){const items=p[key]||[];const nin=h('input',{class:'in',id:'ck-new-'+key,placeholder:ph,'aria-label':ph});
+  const add=()=>{const n=nin.value.trim();if(!n){nin.focus();return}act(p,d=>{L(d,key).push({id:'c'+uidn(),t:n,done:false})});S.focus='ck-new-'+key;render()};
+  nin.addEventListener('keydown',e=>{if(e.key==='Enter')add()});
+  const sorted=[...items.filter(i=>!i.done),...items.filter(i=>i.done)];const nd=items.filter(i=>i.done).length;
+  return h('div',{},h('div',{class:'tools',style:'max-width:640px'},nin,h('button',{class:'btn pri',onclick:add},'Добавить')),
+    h('div',{class:'bk-list',style:'margin-top:10px;max-width:640px'},sorted.map(i=>h('div',{class:'fedit'+(i.done?' ck-done':'')},
+      chkb(i.done,v=>{act(p,d=>{const x=(d[key]||[]).find(y=>y.id===i.id);if(x)x.done=v});render()},'Готово: '+i.t),
+      inp(i.t,'Пункт','ck-'+i.id,v=>edit(p,d=>{const x=(d[key]||[]).find(y=>y.id===i.id);if(x)x.t=v}),'grow'),
+      delb(()=>{act(p,d=>{d[key]=(d[key]||[]).filter(y=>y.id!==i.id)});render()},'Удалить: '+i.t)))),
+    !items.length?h('p',{class:'status'},'Пока пусто'):null,
+    nd?h('div',{class:'tools',style:'margin-top:10px'},h('button',{class:'btn quiet sm',onclick:()=>{act(p,d=>{d[key]=(d[key]||[]).filter(y=>!y.done)});toast('Отмеченные убраны',true);render()}},'Убрать отмеченные ('+nd+')')):null)}
+function homeView(p){const tab=S.view.htab||'chores';const open=k=>(p[k]||[]).filter(i=>!i.done).length;
+  const tabs=h('div',{class:'chips'},[['chores','Регулярные дела'],['todo','Надо сделать · '+open('todos')],['shop','Покупки · '+open('shop')]].map(([k,l])=>
+    h('button',{class:'chip','aria-pressed':String(tab===k),onclick:()=>{S.view.htab=k;render()}},l)));
+  if(tab==='chores'){const out=trackerView(p);out.splice(2,0,tabs);return out}
+  const out=head(p,tab==='todo'?'Что нужно сделать по дому и что ты заметила по пути.':'Список продуктов и всего, что нужно купить.');out.push(tabs);
+  if(tab==='todo'){out.push(checkList(p,'todos','Что нужно сделать, например: починить кран'));
+    out.push(h('div',{class:'field',style:'margin-top:18px'},h('div',{class:'lab'},'Наблюдения'),ta(p.obs,'Что заметила: где пыль, что скоро кончится, что скрипит…','home-obs',v=>edit(p,d=>{d.obs=v}),'write')))}
+  else out.push(checkList(p,'shop','Что купить'));
   return out}
 
 /* ---------- helpers for new features ---------- */
